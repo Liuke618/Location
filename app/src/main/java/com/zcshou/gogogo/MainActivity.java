@@ -1,5 +1,6 @@
 package com.zcshou.gogogo;
 
+import android.annotation.SuppressLint;
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
@@ -1154,6 +1155,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     }
 
     /*============================== 更新 相关 ==============================*/
+    // InlinedApi：RECEIVER_NOT_EXPORTED 为 API 33 常量，编译期内联；33 以下系统忽略未知 flag 位，保持既有降级行为
+    @SuppressLint("InlinedApi")
     private void initUpdateVersion() {
         mDownloadManager =(DownloadManager) MainActivity.this.getSystemService(DOWNLOAD_SERVICE);
 

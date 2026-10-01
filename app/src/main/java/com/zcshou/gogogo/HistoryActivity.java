@@ -50,6 +50,8 @@ public class HistoryActivity extends BaseActivity {
     private List<Map<String, Object>> mAllRecord;
     private SharedPreferences sharedPreferences;
 
+    // deprecation：setStatusBarColor 自 API 36 弃用，官方替代（EdgeToEdge 内容延伸进状态栏）属 UI 行为变更，暂保留旧调用
+    @SuppressWarnings("deprecation")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

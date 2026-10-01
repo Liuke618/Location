@@ -13,7 +13,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
-import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationManager;
 import android.location.provider.ProviderProperties;
@@ -137,6 +136,8 @@ public class ServiceGo extends Service {
         super.onDestroy();
     }
 
+    // InlinedApi：RECEIVER_NOT_EXPORTED 为 API 33 常量，编译期内联；33 以下系统忽略未知 flag 位，保持既有降级行为
+    @SuppressLint("InlinedApi")
     private void initNotification() {
         mActReceiver = new NoteActionReceiver();
         IntentFilter filter = new IntentFilter();
@@ -239,11 +240,9 @@ public class ServiceGo extends Service {
         }
     }
 
-    // 注意下面临时添加 @SuppressLint("wrongconstant") 以处理 addTestProvider 参数值的 lint 错误
-    @SuppressLint("wrongconstant")
     private void addTestProviderGPS() {
         try {
-            // 注意，由于 android api 问题，下面的参数会提示错误(以下参数是通过相关API获取的真实GPS参数，不是随便写的)
+            // minSdk 31，直接使用 ProviderProperties 参数重载，lint 不再要求 wrongconstant 抑制
             mLocManager.addTestProvider(LocationManager.GPS_PROVIDER, false, true, false,
                     false, true, true, true, ProviderProperties.POWER_USAGE_HIGH, ProviderProperties.ACCURACY_FINE);
             if (!mLocManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
@@ -258,7 +257,7 @@ public class ServiceGo extends Service {
         try {
             // 尽可能模拟真实的 GPS 数据
             Location loc = new Location(LocationManager.GPS_PROVIDER);
-            loc.setAccuracy(Criteria.ACCURACY_FINE);    // 设定此位置的估计水平精度，以米为单位。
+            loc.setAccuracy(1.0f);                       // 原 Criteria.ACCURACY_FINE（值=1 米），该常量 API 36 起弃用，按原值内联保持行为不变
             loc.setAltitude(mCurAlt);                     // 设置高度，在 WGS 84 参考坐标系中的米
             loc.setBearing(mCurBea);                       // 方向（度）
             loc.setLatitude(mCurLat);                   // 纬度（度）
@@ -287,11 +286,9 @@ public class ServiceGo extends Service {
         }
     }
 
-    // 注意下面临时添加 @SuppressLint("wrongconstant") 以处理 addTestProvider 参数值的 lint 错误
-    @SuppressLint("wrongconstant")
     private void addTestProviderNetwork() {
         try {
-            // 注意，由于 android api 问题，下面的参数会提示错误(以下参数是通过相关API获取的真实NETWORK参数，不是随便写的)
+            // minSdk 31，直接使用 ProviderProperties 参数重载，lint 不再要求 wrongconstant 抑制
             mLocManager.addTestProvider(LocationManager.NETWORK_PROVIDER, true, false,
                     true, true, true, true,
                     true, ProviderProperties.POWER_USAGE_LOW, ProviderProperties.ACCURACY_COARSE);
@@ -307,7 +304,7 @@ public class ServiceGo extends Service {
         try {
             // 尽可能模拟真实的 NETWORK 数据
             Location loc = new Location(LocationManager.NETWORK_PROVIDER);
-            loc.setAccuracy(Criteria.ACCURACY_COARSE);  // 设定此位置的估计水平精度，以米为单位。
+            loc.setAccuracy(2.0f);                       // 原 Criteria.ACCURACY_COARSE（值=2 米），该常量 API 36 起弃用，按原值内联保持行为不变
             loc.setAltitude(mCurAlt);                     // 设置高度，在 WGS 84 参考坐标系中的米
             loc.setBearing(mCurBea);                       // 方向（度）
             loc.setLatitude(mCurLat);                   // 纬度（度）
