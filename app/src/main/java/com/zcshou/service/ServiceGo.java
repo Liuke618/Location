@@ -1,5 +1,6 @@
 package com.zcshou.service;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -10,6 +11,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.content.pm.ServiceInfo;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationManager;
@@ -25,6 +28,7 @@ import android.os.SystemClock;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 
 import com.elvishew.xlog.XLog;
 import com.zcshou.gogogo.MainActivity;
@@ -68,6 +72,14 @@ public class ServiceGo extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        // Android 14+ 要求启动 location 类型前台服务前定位权限已授予
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            XLog.e("SERVICEGO: ERROR - location permission not granted, stop service");
+            stopSelf();
+            return;
+        }
 
         mLocManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
 
@@ -117,7 +129,8 @@ public class ServiceGo extends Service {
         IntentFilter filter = new IntentFilter();
         filter.addAction(SERVICE_GO_NOTE_ACTION_JOYSTICK_SHOW);
         filter.addAction(SERVICE_GO_NOTE_ACTION_JOYSTICK_HIDE);
-        registerReceiver(mActReceiver, filter);
+        // androidx.core 1.8.0 无 ContextCompat.RECEIVER_NOT_EXPORTED，改用平台常量（API 33+ 生效）
+        registerReceiver(mActReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
 
         NotificationChannel mChannel = new NotificationChannel(SERVICE_GO_NOTE_CHANNEL_ID, SERVICE_GO_NOTE_CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT);
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
@@ -144,7 +157,7 @@ public class ServiceGo extends Service {
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .build();
 
-        startForeground(SERVICE_GO_NOTE_ID, notification);
+        startForeground(SERVICE_GO_NOTE_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
     }
 
     private void initJoyStick() {
