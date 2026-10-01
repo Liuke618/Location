@@ -5,20 +5,18 @@ plugins {
 }
 
 android {
-    ndkVersion = '26.2.11394342'
     compileSdk = 32
-    buildToolsVersion = '36.0.0'
     namespace = 'com.zcshou.gogogo'
 
     signingConfigs {
         debug {
-            storeFile file('..\\keystore\\GoGoGo.jks')
+            storeFile file('../keystore/GoGoGo.jks')
             storePassword 'GoGoGo'
             keyAlias 'GoGoKey'
             keyPassword 'GoGoGo'
         }
         release {
-            storeFile file('..\\keystore\\GoGoGo.jks')
+            storeFile file('../keystore/GoGoGo.jks')
             storePassword 'GoGoGo'
             keyAlias 'GoGoKey'
             keyPassword 'GoGoGo'
@@ -27,18 +25,21 @@ android {
 
     defaultConfig {
         applicationId "com.zcshou.gogogo"
-        minSdkVersion 27
+        minSdk 27
         //noinspection ExpiredTargetSdkVersion
-        targetSdkVersion 32
+        targetSdk 32
         versionCode 1123
         versionName '1.12.3' // https://semver.org/lang/zh-CN/
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        resourceConfigurations += ['zh', 'zh-rCN', 'en', 'en-rUS']
         ndk {
             //noinspection ChromeOsAbiSupport
             abiFilters "arm64-v8a"
         }
         signingConfig = signingConfigs.release
+    }
+
+    androidResources {
+        localeFilters += ['zh', 'zh-rCN', 'en', 'en-rUS']
     }
 
     buildTypes {
@@ -54,10 +55,9 @@ android {
             // Includes the default ProGuard rules files that are packaged with
             // the Android Gradle plugin. To learn more, go to the section about
             // R8 configuration files.
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
 
             signingConfig = signingConfigs.release
-            multiDexEnabled = true
         }
         debug {
             signingConfig = signingConfigs.debug
@@ -70,11 +70,11 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
-    packagingOptions {
+    packaging {
         jniLibs {
             excludes += ['lib/armeabi/**']
         }
@@ -93,20 +93,14 @@ android {
         includeInApk = false
         includeInBundle = false
     }
+}
 
-    // 指定输出的可执行程序的名字
-    applicationVariants.configureEach { variant ->
-        variant.outputs.configureEach { output ->
-            def outputFile = output.outputFile
-            if (outputFile != null && outputFile.name.endsWith('.apk')) {
-                def fileName
-                if (variant.buildType.name == 'release') {
-                    fileName = "Go_${defaultConfig.versionName}_arm64-v8a_release.apk"
-                } else {
-                    fileName = "Go_${defaultConfig.versionName}_arm64-v8a_debug.apk"
-                }
-                outputFileName=fileName
-            }
+def apkBaseName = "Go_${android.defaultConfig.versionName}_arm64-v8a"
+
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.each { output ->
+            output.outputFileName.set("${apkBaseName}_${variant.buildType}.apk")
         }
     }
 }
