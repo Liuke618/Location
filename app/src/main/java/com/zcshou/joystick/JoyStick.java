@@ -3,8 +3,6 @@ package com.zcshou.joystick;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.graphics.PixelFormat;
 import android.text.TextUtils;
 import android.util.AttributeSet;
@@ -34,8 +32,10 @@ import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.search.sug.SuggestionSearch;
 import com.baidu.mapapi.search.sug.SuggestionSearchOption;
-import com.zcshou.database.DataBaseHistoryLocation;
+import com.zcshou.data.HistoryRepository;
+import com.zcshou.data.HistoryRepository.LocationRow;
 import com.zcshou.domain.LocationMath;
+import com.zcshou.gogogo.GoApplication;
 import com.zcshou.gogogo.HistoryActivity;
 import com.zcshou.gogogo.MainActivity;
 import com.zcshou.gogogo.R;
@@ -766,25 +766,18 @@ public class JoyStick extends View {
     }
 
     private void fetchAllRecord() {
-        SQLiteDatabase mHistoryLocationDB;
-
         try {
-            DataBaseHistoryLocation hisLocDBHelper = new DataBaseHistoryLocation(mContext.getApplicationContext());
-            mHistoryLocationDB = hisLocDBHelper.getWritableDatabase();
+            HistoryRepository historyRepository = ((GoApplication) mContext.getApplicationContext()).getAppContainer().getHistoryRepository();
 
-            Cursor cursor = mHistoryLocationDB.query(DataBaseHistoryLocation.TABLE_NAME, null,
-                    DataBaseHistoryLocation.DB_COLUMN_ID + " > ?", new String[] {"0"},
-                    null, null, DataBaseHistoryLocation.DB_COLUMN_TIMESTAMP + " DESC", null);
-
-            while (cursor.moveToNext()) {
+            for (LocationRow row : historyRepository.getLocationRows()) {
                 Map<String, Object> item = new HashMap<>();
-                int ID = cursor.getInt(0);
-                String Location = cursor.getString(1);
-                String Longitude = cursor.getString(2);
-                String Latitude = cursor.getString(3);
-                long TimeStamp = cursor.getInt(4);
-                String BD09Longitude = cursor.getString(5);
-                String BD09Latitude = cursor.getString(6);
+                int ID = row.id;
+                String Location = row.location;
+                String Longitude = row.lngWgs;
+                String Latitude = row.latWgs;
+                long TimeStamp = row.timestamp;
+                String BD09Longitude = row.lngCustom;
+                String BD09Latitude = row.latCustom;
                 Log.d("TB", ID + "\t" + Location + "\t" + Longitude + "\t" + Latitude + "\t" + TimeStamp + "\t" + BD09Longitude + "\t" + BD09Latitude);
                 BigDecimal bigDecimalLongitude = BigDecimal.valueOf(Double.parseDouble(Longitude));
                 BigDecimal bigDecimalLatitude = BigDecimal.valueOf(Double.parseDouble(Latitude));
@@ -801,8 +794,6 @@ public class JoyStick extends View {
                 item.put(HistoryActivity.KEY_LNG_LAT_CUSTOM, "[经度:" + doubleBDLongitude + " 纬度:" + doubleBDLatitude + "]");
                 mAllRecord.add(item);
             }
-            cursor.close();
-            mHistoryLocationDB.close();
         } catch (Exception e) {
             Log.e("JOYSTICK", "ERROR - fetchAllRecord");
         }

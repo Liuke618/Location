@@ -5,14 +5,11 @@ import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -94,8 +91,9 @@ import java.util.List;
 import java.util.Map;
 
 import com.zcshou.service.ServiceGo;
-import com.zcshou.database.DataBaseHistoryLocation;
-import com.zcshou.database.DataBaseHistorySearch;
+import com.zcshou.data.HistoryRepository;
+import com.zcshou.data.HistoryRepository.LocationRow;
+import com.zcshou.data.HistoryRepository.SearchRow;
 import com.zcshou.utils.ShareUtils;
 import com.zcshou.utils.GoUtils;
 import com.zcshou.utils.MapUtils;
@@ -150,8 +148,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     private ServiceConnection mConnection;
     private FloatingActionButton mButtonStart;
     /*============================== 历史记录 相关 ==============================*/
-    private SQLiteDatabase mLocationHistoryDB;
-    private SQLiteDatabase mSearchHistoryDB;
+    private HistoryRepository mHistoryRepository;
     /*============================== SearchView 相关 ==============================*/
     private SearchView searchView;
     private ListView mSearchList;
@@ -215,7 +212,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
             }
         };
 
-        initStoreHistory();
+        mHistoryRepository = ((GoApplication) getApplicationContext()).getAppContainer().getHistoryRepository();
 
         initSearchView();
 
@@ -271,10 +268,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
         //poi search destroy
         mSuggestionSearch.destroy();
 
-        //close db
-        mLocationHistoryDB.close();
-        mSearchHistoryDB.close();
-
         super.onDestroy();
     }
 
@@ -295,19 +288,19 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
             public boolean onMenuItemActionExpand(MenuItem item) {
                 mSearchLayout.setVisibility(View.INVISIBLE);
                 //展示搜索历史
-                List<Map<String, Object>> data = getSearchHistory();
+                List<Map<String, Object>> data = mHistoryRepository.getSearchRows();
 
                 if (!data.isEmpty()) {
                     SimpleAdapter simAdapt = new SimpleAdapter(
                             MainActivity.this,
                             data,
                             R.layout.search_item,
-                            new String[] {DataBaseHistorySearch.DB_COLUMN_KEY,
-                                    DataBaseHistorySearch.DB_COLUMN_DESCRIPTION,
-                                    DataBaseHistorySearch.DB_COLUMN_TIMESTAMP,
-                                    DataBaseHistorySearch.DB_COLUMN_IS_LOCATION,
-                                    DataBaseHistorySearch.DB_COLUMN_LONGITUDE_CUSTOM,
-                                    DataBaseHistorySearch.DB_COLUMN_LATITUDE_CUSTOM},
+                            new String[] {HistoryRepository.DB_COLUMN_KEY,
+                                    HistoryRepository.DB_COLUMN_DESCRIPTION,
+                                    HistoryRepository.DB_COLUMN_TIMESTAMP,
+                                    HistoryRepository.DB_COLUMN_IS_LOCATION,
+                                    HistoryRepository.DB_COLUMN_LONGITUDE_CUSTOM,
+                                    HistoryRepository.DB_COLUMN_LATITUDE_CUSTOM},
                             new int[] {R.id.search_key,
                                     R.id.search_description,
                                     R.id.search_timestamp,
@@ -335,14 +328,11 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
                             .keyword(query)
                             .city(mCurrentCity)
                     );
-                    //搜索历史 插表参数
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(DataBaseHistorySearch.DB_COLUMN_KEY, query);
-                    contentValues.put(DataBaseHistorySearch.DB_COLUMN_DESCRIPTION, "搜索关键字");
-                    contentValues.put(DataBaseHistorySearch.DB_COLUMN_IS_LOCATION, DataBaseHistorySearch.DB_SEARCH_TYPE_KEY);
-                    contentValues.put(DataBaseHistorySearch.DB_COLUMN_TIMESTAMP, System.currentTimeMillis() / 1000);
+                    //搜索历史 插表参数（纯关键字搜索，经纬度字段为空，与原插表缺省列语义一致）
+                    SearchRow searchRow = new SearchRow(query, "搜索关键字", HistoryRepository.DB_SEARCH_TYPE_KEY,
+                            null, null, null, null, System.currentTimeMillis() / 1000);
 
-                    DataBaseHistorySearch.saveHistorySearch(mSearchHistoryDB, contentValues);
+                    mHistoryRepository.addSearchRow(searchRow);
                     mBaiduMap.clear();
                     mSearchLayout.setVisibility(View.INVISIBLE);
                 } catch (Exception e) {
@@ -880,45 +870,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     }
 
     /*============================== 历史记录 相关 ==============================*/
-    private void initStoreHistory() {
-        try {
-            // 定位历史
-            DataBaseHistoryLocation dbLocation = new DataBaseHistoryLocation(getApplicationContext());
-            mLocationHistoryDB = dbLocation.getWritableDatabase();
-            // 搜索历史
-            DataBaseHistorySearch dbHistory = new DataBaseHistorySearch(getApplicationContext());
-            mSearchHistoryDB = dbHistory.getWritableDatabase();
-        } catch (Exception e) {
-            XLog.e("ERROR: sqlite init error");
-        }
-    }
-
-    //获取查询历史
-    private List<Map<String, Object>> getSearchHistory() {
-        List<Map<String, Object>> data = new ArrayList<>();
-
-        try {
-            Cursor cursor = mSearchHistoryDB.query(DataBaseHistorySearch.TABLE_NAME, null,
-                    DataBaseHistorySearch.DB_COLUMN_ID + " > ?", new String[] {"0"},
-                    null, null, DataBaseHistorySearch.DB_COLUMN_TIMESTAMP + " DESC", null);
-
-            while (cursor.moveToNext()) {
-                Map<String, Object> searchHistoryItem = new HashMap<>();
-                searchHistoryItem.put(DataBaseHistorySearch.DB_COLUMN_KEY, cursor.getString(1));
-                searchHistoryItem.put(DataBaseHistorySearch.DB_COLUMN_DESCRIPTION, cursor.getString(2));
-                searchHistoryItem.put(DataBaseHistorySearch.DB_COLUMN_TIMESTAMP, "" + cursor.getInt(3));
-                searchHistoryItem.put(DataBaseHistorySearch.DB_COLUMN_IS_LOCATION, "" + cursor.getInt(4));
-                searchHistoryItem.put(DataBaseHistorySearch.DB_COLUMN_LONGITUDE_CUSTOM, cursor.getString(7));
-                searchHistoryItem.put(DataBaseHistorySearch.DB_COLUMN_LATITUDE_CUSTOM, cursor.getString(8));
-                data.add(searchHistoryItem);
-            }
-            cursor.close();
-        } catch (Exception e) {
-            XLog.e("ERROR: getSearchHistory");
-        }
-
-        return data;
-    }
 
     // 记录请求的位置信息
     private void recordCurrentLocation(double lng, double lat) {
@@ -937,15 +888,10 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
                 //http 请求失败
                 XLog.e("HTTP: HTTP GET FAILED");
                 //插表参数
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LOCATION, mMarkName);
-                contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LONGITUDE_WGS84, String.valueOf(latLng[0]));
-                contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LATITUDE_WGS84, String.valueOf(latLng[1]));
-                contentValues.put(DataBaseHistoryLocation.DB_COLUMN_TIMESTAMP, System.currentTimeMillis() / 1000);
-                contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LONGITUDE_CUSTOM, Double.toString(lng));
-                contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LATITUDE_CUSTOM, Double.toString(lat));
+                LocationRow locationRow = new LocationRow(mMarkName, String.valueOf(latLng[0]), String.valueOf(latLng[1]),
+                        System.currentTimeMillis() / 1000, Double.toString(lng), Double.toString(lat));
 
-                DataBaseHistoryLocation.saveHistoryLocation(mLocationHistoryDB, contentValues);
+                mHistoryRepository.addLocationRow(locationRow);
             }
 
             @Override
@@ -959,35 +905,20 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
                         if (Integer.parseInt(getRetJson.getString("status")) == 0) { // 位置获取成功
                             JSONObject posInfoJson = getRetJson.getJSONObject("result");
                             String formatted_address = posInfoJson.getString("formatted_address");
-                            ContentValues contentValues = new ContentValues();
-                            contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LOCATION, formatted_address);
-                            contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LONGITUDE_WGS84, String.valueOf(latLng[0]));
-                            contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LATITUDE_WGS84, String.valueOf(latLng[1]));
-                            contentValues.put(DataBaseHistoryLocation.DB_COLUMN_TIMESTAMP, System.currentTimeMillis() / 1000);
-                            contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LONGITUDE_CUSTOM, Double.toString(lng));
-                            contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LATITUDE_CUSTOM, Double.toString(lat));
-                            DataBaseHistoryLocation.saveHistoryLocation(mLocationHistoryDB, contentValues);
+                            LocationRow locationRow = new LocationRow(formatted_address, String.valueOf(latLng[0]), String.valueOf(latLng[1]),
+                                    System.currentTimeMillis() / 1000, Double.toString(lng), Double.toString(lat));
+                            mHistoryRepository.addLocationRow(locationRow);
                         } else {
-                            ContentValues contentValues = new ContentValues();
-                            contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LOCATION, mMarkName == null ? getRetJson.getString("message"): mMarkName);
-                            contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LONGITUDE_WGS84, String.valueOf(latLng[0]));
-                            contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LATITUDE_WGS84, String.valueOf(latLng[1]));
-                            contentValues.put(DataBaseHistoryLocation.DB_COLUMN_TIMESTAMP, System.currentTimeMillis() / 1000);
-                            contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LONGITUDE_CUSTOM, Double.toString(lng));
-                            contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LATITUDE_CUSTOM, Double.toString(lat));
-                            DataBaseHistoryLocation.saveHistoryLocation(mLocationHistoryDB, contentValues);
+                            LocationRow locationRow = new LocationRow(mMarkName == null ? getRetJson.getString("message") : mMarkName, String.valueOf(latLng[0]), String.valueOf(latLng[1]),
+                                    System.currentTimeMillis() / 1000, Double.toString(lng), Double.toString(lat));
+                            mHistoryRepository.addLocationRow(locationRow);
                         }
                     } catch (JSONException e) {
                         XLog.e("JSON: resolve json error");
-                        ContentValues contentValues = new ContentValues();
-                        contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LOCATION, mMarkName == null ? getResources().getString(R.string.history_location_default_name) : mMarkName);
-                        contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LOCATION, mMarkName);
-                        contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LONGITUDE_WGS84, String.valueOf(latLng[0]));
-                        contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LATITUDE_WGS84, String.valueOf(latLng[1]));
-                        contentValues.put(DataBaseHistoryLocation.DB_COLUMN_TIMESTAMP, System.currentTimeMillis() / 1000);
-                        contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LONGITUDE_CUSTOM, Double.toString(lng));
-                        contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LATITUDE_CUSTOM, Double.toString(lat));
-                        DataBaseHistoryLocation.saveHistoryLocation(mLocationHistoryDB, contentValues);
+                        // 原代码此处连续两次 put LOCATION（先默认名，再被 mMarkName 覆盖），最终落库值即 mMarkName，此处按最终值保留现状行为
+                        LocationRow locationRow = new LocationRow(mMarkName, String.valueOf(latLng[0]), String.valueOf(latLng[1]),
+                                System.currentTimeMillis() / 1000, Double.toString(lng), Double.toString(lat));
+                        mHistoryRepository.addLocationRow(locationRow);
                     }
                 }
             }
@@ -1014,17 +945,13 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
 
             // mSearchList.setVisibility(View.GONE);
             //搜索历史 插表参数
-            ContentValues contentValues = new ContentValues();
-            contentValues.put(DataBaseHistorySearch.DB_COLUMN_KEY, mMarkName);
-            contentValues.put(DataBaseHistorySearch.DB_COLUMN_DESCRIPTION, ((TextView) view.findViewById(R.id.poi_address)).getText().toString());
-            contentValues.put(DataBaseHistorySearch.DB_COLUMN_IS_LOCATION, DataBaseHistorySearch.DB_SEARCH_TYPE_RESULT);
-            contentValues.put(DataBaseHistorySearch.DB_COLUMN_LONGITUDE_CUSTOM, lng);
-            contentValues.put(DataBaseHistorySearch.DB_COLUMN_LATITUDE_CUSTOM, lat);
-            contentValues.put(DataBaseHistorySearch.DB_COLUMN_LONGITUDE_WGS84, String.valueOf(latLng[0]));
-            contentValues.put(DataBaseHistorySearch.DB_COLUMN_LATITUDE_WGS84, String.valueOf(latLng[1]));
-            contentValues.put(DataBaseHistorySearch.DB_COLUMN_TIMESTAMP, System.currentTimeMillis() / 1000);
+            SearchRow searchRow = new SearchRow(mMarkName,
+                    ((TextView) view.findViewById(R.id.poi_address)).getText().toString(),
+                    HistoryRepository.DB_SEARCH_TYPE_RESULT,
+                    String.valueOf(latLng[0]), String.valueOf(latLng[1]), lng, lat,
+                    System.currentTimeMillis() / 1000);
 
-            DataBaseHistorySearch.saveHistorySearch(mSearchHistoryDB, contentValues);
+            mHistoryRepository.addSearchRow(searchRow);
             mSearchLayout.setVisibility(View.INVISIBLE);
             searchItem.collapseActionView();
         });
@@ -1052,17 +979,12 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
                 mHistoryLayout.setVisibility(View.INVISIBLE);
                 searchItem.collapseActionView();
                 //更新表
-                ContentValues contentValues = new ContentValues();
-                contentValues.put(DataBaseHistorySearch.DB_COLUMN_KEY, searchKey);
-                contentValues.put(DataBaseHistorySearch.DB_COLUMN_DESCRIPTION, searchDescription);
-                contentValues.put(DataBaseHistorySearch.DB_COLUMN_IS_LOCATION, DataBaseHistorySearch.DB_SEARCH_TYPE_RESULT);
-                contentValues.put(DataBaseHistorySearch.DB_COLUMN_LONGITUDE_CUSTOM, lng);
-                contentValues.put(DataBaseHistorySearch.DB_COLUMN_LATITUDE_CUSTOM, lat);
-                contentValues.put(DataBaseHistorySearch.DB_COLUMN_LONGITUDE_WGS84, String.valueOf(latLng[0]));
-                contentValues.put(DataBaseHistorySearch.DB_COLUMN_LATITUDE_WGS84, String.valueOf(latLng[1]));
-                contentValues.put(DataBaseHistorySearch.DB_COLUMN_TIMESTAMP, System.currentTimeMillis() / 1000);
+                SearchRow searchRow = new SearchRow(searchKey, searchDescription,
+                        HistoryRepository.DB_SEARCH_TYPE_RESULT,
+                        String.valueOf(latLng[0]), String.valueOf(latLng[1]), lng, lat,
+                        System.currentTimeMillis() / 1000);
 
-                DataBaseHistorySearch.saveHistorySearch(mSearchHistoryDB, contentValues);
+                mHistoryRepository.addSearchRow(searchRow);
             } else if (searchIsLoc.equals("0")) { //如果仅仅是搜索
                 try {
                     searchView.setQuery(searchKey, true);
@@ -1082,22 +1004,22 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
                         String searchKey = ((TextView) view.findViewById(R.id.search_key)).getText().toString();
 
                         try {
-                            mSearchHistoryDB.delete(DataBaseHistorySearch.TABLE_NAME, DataBaseHistorySearch.DB_COLUMN_KEY + " = ?", new String[] {searchKey});
+                            mHistoryRepository.deleteSearchRow(searchKey);
                             //删除成功
                             //展示搜索历史
-                            List<Map<String, Object>> data = getSearchHistory();
+                            List<Map<String, Object>> data = mHistoryRepository.getSearchRows();
 
                             if (!data.isEmpty()) {
                                 SimpleAdapter simAdapt = new SimpleAdapter(
                                         MainActivity.this,
                                         data,
                                         R.layout.search_item,
-                                        new String[] {DataBaseHistorySearch.DB_COLUMN_KEY,
-                                                DataBaseHistorySearch.DB_COLUMN_DESCRIPTION,
-                                                DataBaseHistorySearch.DB_COLUMN_TIMESTAMP,
-                                                DataBaseHistorySearch.DB_COLUMN_IS_LOCATION,
-                                                DataBaseHistorySearch.DB_COLUMN_LONGITUDE_CUSTOM,
-                                                DataBaseHistorySearch.DB_COLUMN_LATITUDE_CUSTOM}, // 与下面数组元素要一一对应
+                                        new String[] {HistoryRepository.DB_COLUMN_KEY,
+                                                HistoryRepository.DB_COLUMN_DESCRIPTION,
+                                                HistoryRepository.DB_COLUMN_TIMESTAMP,
+                                                HistoryRepository.DB_COLUMN_IS_LOCATION,
+                                                HistoryRepository.DB_COLUMN_LONGITUDE_CUSTOM,
+                                                HistoryRepository.DB_COLUMN_LATITUDE_CUSTOM}, // 与下面数组元素要一一对应
                                         new int[] {R.id.search_key, R.id.search_description, R.id.search_timestamp, R.id.search_isLoc, R.id.search_longitude, R.id.search_latitude});
                                 mSearchHistoryList.setAdapter(simAdapt);
                                 mHistoryLayout.setVisibility(View.VISIBLE);

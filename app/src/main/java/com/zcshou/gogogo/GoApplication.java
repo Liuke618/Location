@@ -23,6 +23,8 @@ public class GoApplication extends Application {
     public static final String LOG_FILE_NAME = APP_NAME + ".log";
     private static final long MAX_TIME = 1000 * 60 * 60 * 24 * 3; // 3 days
 
+    private AppContainer mAppContainer;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -38,6 +40,12 @@ public class GoApplication extends Application {
         SDKInitializer.initialize(this);
 
         SDKInitializer.setCoordType(CoordType.BD09LL);
+
+        mAppContainer = new AppContainer(this);
+    }
+
+    public AppContainer getAppContainer() {
+        return mAppContainer;
     }
 
     /**

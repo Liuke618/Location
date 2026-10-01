@@ -1,8 +1,6 @@
 package com.zcshou.gogogo;
 
 import android.content.SharedPreferences;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 
 import androidx.appcompat.app.ActionBar;
@@ -33,7 +31,8 @@ import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 
-import com.zcshou.database.DataBaseHistoryLocation;
+import com.zcshou.data.HistoryRepository;
+import com.zcshou.data.HistoryRepository.LocationRow;
 import com.zcshou.utils.GoUtils;
 
 public class HistoryActivity extends BaseActivity {
@@ -46,7 +45,7 @@ public class HistoryActivity extends BaseActivity {
     private ListView mRecordListView;
     private TextView noRecordText;
     private LinearLayout mSearchLayout;
-    private SQLiteDatabase mHistoryLocationDB;
+    private HistoryRepository mHistoryRepository;
     private List<Map<String, Object>> mAllRecord;
     private SharedPreferences sharedPreferences;
 
@@ -77,12 +76,6 @@ public class HistoryActivity extends BaseActivity {
         initSearchView();
 
         initRecordListView();
-    }
-
-    @Override
-    protected void onDestroy() {
-        mHistoryLocationDB.close();
-        super.onDestroy();
     }
 
     @Override
@@ -122,8 +115,7 @@ public class HistoryActivity extends BaseActivity {
 
     private void initLocationDataBase() {
         try {
-            DataBaseHistoryLocation hisLocDBHelper = new DataBaseHistoryLocation(getApplicationContext());
-            mHistoryLocationDB = hisLocDBHelper.getWritableDatabase();
+            mHistoryRepository = ((GoApplication) getApplicationContext()).getAppContainer().getHistoryRepository();
         } catch (Exception e) {
             Log.e("HistoryActivity", "ERROR - initLocationDataBase");
         }
@@ -136,19 +128,15 @@ public class HistoryActivity extends BaseActivity {
         List<Map<String, Object>> data = new ArrayList<>();
 
         try {
-            Cursor cursor = mHistoryLocationDB.query(DataBaseHistoryLocation.TABLE_NAME, null,
-                    DataBaseHistoryLocation.DB_COLUMN_ID + " > ?", new String[] {"0"},
-                    null, null, DataBaseHistoryLocation.DB_COLUMN_TIMESTAMP + " DESC", null);
-
-            while (cursor.moveToNext()) {
+            for (LocationRow row : mHistoryRepository.getLocationRows()) {
                 Map<String, Object> item = new HashMap<>();
-                int ID = cursor.getInt(0);
-                String Location = cursor.getString(1);
-                String Longitude = cursor.getString(2);
-                String Latitude = cursor.getString(3);
-                long TimeStamp = cursor.getInt(4);
-                String BD09Longitude = cursor.getString(5);
-                String BD09Latitude = cursor.getString(6);
+                int ID = row.id;
+                String Location = row.location;
+                String Longitude = row.lngWgs;
+                String Latitude = row.latWgs;
+                long TimeStamp = row.timestamp;
+                String BD09Longitude = row.lngCustom;
+                String BD09Latitude = row.latCustom;
                 Log.d("TB", ID + "\t" + Location + "\t" + Longitude + "\t" + Latitude + "\t" + TimeStamp + "\t" + BD09Longitude + "\t" + BD09Latitude);
                 BigDecimal bigDecimalLongitude = BigDecimal.valueOf(Double.parseDouble(Longitude));
                 BigDecimal bigDecimalLatitude = BigDecimal.valueOf(Double.parseDouble(Latitude));
@@ -165,7 +153,6 @@ public class HistoryActivity extends BaseActivity {
                 item.put(KEY_LNG_LAT_CUSTOM, "[经度:" + doubleBDLongitude + " 纬度:" + doubleBDLatitude + "]");
                 data.add(item);
             }
-            cursor.close();
         } catch (Exception e) {
             data.clear();
             Log.e("HistoryActivity", "ERROR - fetchAllRecord");
@@ -184,8 +171,7 @@ public class HistoryActivity extends BaseActivity {
         final long weekSecond = (long) (limits * 24 * 60 * 60);
 
         try {
-            mHistoryLocationDB.delete(DataBaseHistoryLocation.TABLE_NAME,
-                    DataBaseHistoryLocation.DB_COLUMN_TIMESTAMP + " < ?", new String[] {Long.toString(System.currentTimeMillis() / 1000 - weekSecond)});
+            mHistoryRepository.clearExpiredLocationRows(System.currentTimeMillis() / 1000 - weekSecond);
         } catch (Exception e) {
             Log.e("HistoryActivity", "ERROR - recordArchive");
         }
@@ -196,10 +182,9 @@ public class HistoryActivity extends BaseActivity {
 
         try {
             if (ID <= -1) {
-                mHistoryLocationDB.delete(DataBaseHistoryLocation.TABLE_NAME,null, null);
+                mHistoryRepository.clearAllLocationRows();
             } else {
-                mHistoryLocationDB.delete(DataBaseHistoryLocation.TABLE_NAME,
-                        DataBaseHistoryLocation.DB_COLUMN_ID + " = ?", new String[] {Integer.toString(ID)});
+                mHistoryRepository.deleteLocationRow(ID);
             }
         } catch (Exception e) {
             deleteRet = false;
@@ -289,7 +274,7 @@ public class HistoryActivity extends BaseActivity {
         builder.setView(input);
         builder.setPositiveButton("确认", (dialog, whichButton) -> {
             String userInput = input.getText().toString();
-            DataBaseHistoryLocation.updateHistoryLocation(mHistoryLocationDB, locID, userInput);
+            mHistoryRepository.renameLocationRow(Integer.parseInt(locID), userInput);
             updateRecordList();
         });
         builder.setNegativeButton("取消", null);
