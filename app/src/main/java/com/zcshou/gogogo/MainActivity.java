@@ -45,10 +45,7 @@ import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.preference.PreferenceManager;
 
-import com.baidu.location.BDAbstractLocationListener;
 import com.baidu.location.BDLocation;
-import com.baidu.location.LocationClient;
-import com.baidu.location.LocationClientOption;
 import com.baidu.mapapi.SDKInitializer;
 import com.baidu.mapapi.map.BaiduMap;
 import com.baidu.mapapi.map.InfoWindow;
@@ -86,6 +83,7 @@ import com.zcshou.service.ServiceGoController;
 import com.zcshou.data.HistoryRepository;
 import com.zcshou.data.HistoryRepository.LocationRow;
 import com.zcshou.data.HistoryRepository.SearchRow;
+import com.zcshou.gogogo.location.CurrentLocationSource;
 import com.zcshou.gogogo.map.GeocoderHelper;
 import com.zcshou.gogogo.map.MapController;
 import com.zcshou.gogogo.map.MapState;
@@ -102,7 +100,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
-public class MainActivity extends BaseActivity implements SensorEventListener, MapController.MapEventListener {
+public class MainActivity extends BaseActivity implements SensorEventListener, MapController.MapEventListener, CurrentLocationSource.LocationListener {
     /* 对外 */
     public static final String POI_NAME = "POI_NAME";
     public static final String POI_ADDRESS = "POI_ADDRESS";
@@ -127,7 +125,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     private final float[] mR = new float[9];//旋转矩阵，用来保存磁场和加速度的数据
     private final float[] mDirectionValues = new float[3];//模拟方向传感器的数据（原始数据为弧度）
     /************** 定位 *****************/
-    private LocationClient mLocClient = null;
+    private CurrentLocationSource mCurrentLocationSource;
     private double mCurrentLat = 0.0;       // 当前位置的百度纬度
     private double mCurrentLon = 0.0;       // 当前位置的百度经度
     private float mCurrentDirection = 0.0f;
@@ -181,7 +179,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
 
         initMap();
 
-        initMapLocation();
+        //定位数据源：LocationClient 构造/配置/启停收编于 CurrentLocationSource，回调体保留在本类（原样）
+        mCurrentLocationSource = new CurrentLocationSource(this, this);
+        mCurrentLocationSource.init();
 
         initMapButton();
 
@@ -239,7 +239,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         sMapController = null;
 
         // 退出时销毁定位
-        mLocClient.stop();
+        mCurrentLocationSource.stop();
         // 关闭定位图层
         mMapController.getBaiduMap().setMyLocationEnabled(false);
         mMapController.getMapView().onDestroy();
@@ -536,101 +536,51 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         mMapController.getBaiduMap().animateMapStatus(MapStatusUpdateFactory.zoomIn());
     }
 
-    //开启地图的定位图层
-    private void initMapLocation() {
-        try {
-            // 定位初始化
-            mLocClient = new LocationClient(this);
-            mLocClient.registerLocationListener(new BDAbstractLocationListener() {
-                @Override
-                public void onReceiveLocation(BDLocation bdLocation) {
-                    if (bdLocation == null || mMapController == null || mMapController.getMapView() == null) {// mapview 销毁后不在处理新接收的位置
-                        return;
-                    }
+    /**
+     * 定位回调（回调体原样保留）
+     */
+    @Override
+    public void onReceiveLocation(BDLocation bdLocation) {
+        if (bdLocation == null || mMapController == null || mMapController.getMapView() == null) {// mapview 销毁后不在处理新接收的位置
+            return;
+        }
 
-                    mMapState.setCurrentCity(bdLocation.getCity());
-                    mCurrentLat = bdLocation.getLatitude();
-                    mCurrentLon = bdLocation.getLongitude();
-                    MyLocationData locData = new MyLocationData.Builder()
-                            .accuracy(bdLocation.getRadius())
-                            .direction(mCurrentDirection)// 此处设置开发者获取到的方向信息，顺时针0-360
-                            .latitude(bdLocation.getLatitude())
-                            .longitude(bdLocation.getLongitude()).build();
-                    mMapController.getBaiduMap().setMyLocationData(locData);
-                    MyLocationConfiguration configuration = new MyLocationConfiguration(MyLocationConfiguration.LocationMode.NORMAL, true, null);
-                    mMapController.getBaiduMap().setMyLocationConfiguration(configuration);
+        mMapState.setCurrentCity(bdLocation.getCity());
+        mCurrentLat = bdLocation.getLatitude();
+        mCurrentLon = bdLocation.getLongitude();
+        MyLocationData locData = new MyLocationData.Builder()
+                .accuracy(bdLocation.getRadius())
+                .direction(mCurrentDirection)// 此处设置开发者获取到的方向信息，顺时针0-360
+                .latitude(bdLocation.getLatitude())
+                .longitude(bdLocation.getLongitude()).build();
+        mMapController.getBaiduMap().setMyLocationData(locData);
+        MyLocationConfiguration configuration = new MyLocationConfiguration(MyLocationConfiguration.LocationMode.NORMAL, true, null);
+        mMapController.getBaiduMap().setMyLocationConfiguration(configuration);
 
-                    /* 如果出现错误，则需要重新请求位置 */
-                    int err = bdLocation.getLocType();
-                    if (err == BDLocation.TypeCriteriaException || err == BDLocation.TypeNetWorkException) {
-                        mLocClient.requestLocation();   /* 请求位置 */
-                    } else {
-                        if (isFirstLoc) {
-                            isFirstLoc = false;
-                            // 这里记录百度地图返回的位置
-                            mMapState.setSelectedPoint(new LatLng(bdLocation.getLatitude(), bdLocation.getLongitude()));
-                            MapStatus.Builder builder = new MapStatus.Builder();
-                            builder.target(mMapState.getSelectedPoint()).zoom(18.0f);
-                            mMapController.getBaiduMap().animateMapStatus(MapStatusUpdateFactory.newMapStatus(builder.build()));
+        /* 如果出现错误，则需要重新请求位置 */
+        int err = bdLocation.getLocType();
+        if (err == BDLocation.TypeCriteriaException || err == BDLocation.TypeNetWorkException) {
+            mCurrentLocationSource.requestLocation();   /* 请求位置 */
+        } else {
+            if (isFirstLoc) {
+                isFirstLoc = false;
+                // 这里记录百度地图返回的位置
+                mMapState.setSelectedPoint(new LatLng(bdLocation.getLatitude(), bdLocation.getLongitude()));
+                MapStatus.Builder builder = new MapStatus.Builder();
+                builder.target(mMapState.getSelectedPoint()).zoom(18.0f);
+                mMapController.getBaiduMap().animateMapStatus(MapStatusUpdateFactory.newMapStatus(builder.build()));
 
-                            XLog.i("First Baidu LatLng: " + mMapState.getSelectedPoint());
-                        }
-                    }
-                }
-                /**
-                 * 错误的状态码
-                 * <a><a href="http://lbsyun.baidu.com/index.php?title=android-locsdk/guide/addition-func/error-code">...</a></a>
-                 * <p>
-                 * 回调定位诊断信息，开发者可以根据相关信息解决定位遇到的一些问题
-                 *
-                 * @param locType      当前定位类型
-                 * @param diagnosticType  诊断类型（1~9）
-                 * @param diagnosticMessage 具体的诊断信息释义
-                 */
-                @Override
-                public void onLocDiagnosticMessage(int locType, int diagnosticType, String diagnosticMessage) {
-                    XLog.i("Baidu ERROR: " + locType + "-" + diagnosticType + "-" + diagnosticMessage);
-                }
-            });
-            LocationClientOption locationOption = getLocationClientOption();
-            //需将配置好的LocationClientOption对象，通过setLocOption方法传递给LocationClient对象使用
-            mLocClient.setLocOption(locationOption);
-            //开始定位
-            mLocClient.start();
-        } catch (Exception e) {
-            XLog.e("ERROR: initMapLocation");
+                XLog.i("First Baidu LatLng: " + mMapState.getSelectedPoint());
+            }
         }
     }
 
-    @NonNull
-    private static LocationClientOption getLocationClientOption() {
-        LocationClientOption locationOption = new LocationClientOption();
-        //可选，默认高精度，设置定位模式，高精度，低功耗，仅设备
-        locationOption.setLocationMode(LocationClientOption.LocationMode.Hight_Accuracy);
-        //可选，默认gcj02，设置返回的定位结果坐标系，如果配合百度地图使用，建议设置为bd09ll;
-        locationOption.setCoorType("bd09ll");
-        //可选，默认0，即仅定位一次，设置发起连续定位请求的间隔需要大于等于1000ms才是有效的
-        locationOption.setScanSpan(1000);
-        //可选，设置是否需要地址信息，默认不需要
-        locationOption.setIsNeedAddress(true);
-        //可选，设置是否需要设备方向结果
-        locationOption.setNeedDeviceDirect(false);
-        //可选，默认false，设置是否当gps有效时按照1S1次频率输出GPS结果
-        locationOption.setLocationNotify(true);
-        //可选，默认true，定位SDK内部是一个SERVICE，并放到了独立进程，设置是否在stop的时候杀死这个进程，默认不杀死
-        locationOption.setIgnoreKillProcess(true);
-        //可选，默认false，设置是否需要位置语义化结果，可以在BDLocation.getLocationDescribe里得到，结果类似于“在北京天安门附近”
-        locationOption.setIsNeedLocationDescribe(false);
-        //可选，默认false，设置是否需要POI结果，可以在BDLocation.getPoiList里得到
-        locationOption.setIsNeedLocationPoiList(false);
-        //可选，默认false，设置是否收集CRASH信息，默认收集
-        locationOption.SetIgnoreCacheException(true);
-        //可选，默认false，设置是否开启Gps定位
-        //locationOption.setOpenGps(true);
-        locationOption.setOpenGnss(true);
-        //可选，默认false，设置定位时是否需要海拔信息，默认不需要，除基础定位版本都可用
-        locationOption.setIsNeedAltitude(false);
-        return locationOption;
+    /**
+     * 定位诊断信息回调（错误状态码说明见 CurrentLocationSource.LocationListener）
+     */
+    @Override
+    public void onDiagnostic(int locType, int diagnosticType, String diagnosticMessage) {
+        XLog.i("Baidu ERROR: " + locType + "-" + diagnosticType + "-" + diagnosticMessage);
     }
 
     //地图上各按键的监听
