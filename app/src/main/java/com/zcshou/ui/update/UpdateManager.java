@@ -1,4 +1,4 @@
-package com.zcshou.gogogo.update;
+package com.zcshou.ui.update;
 
 import android.app.Activity;
 import android.app.DownloadManager;

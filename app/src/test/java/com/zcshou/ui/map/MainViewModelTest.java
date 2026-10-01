@@ -1,4 +1,4 @@
-package com.zcshou.gogogo;
+package com.zcshou.ui.map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -9,7 +9,7 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 import androidx.lifecycle.Observer;
 
 import com.baidu.mapapi.model.LatLng;
-import com.zcshou.gogogo.map.MapState;
+import com.zcshou.ui.map.MapState;
 
 import org.junit.Before;
 import org.junit.Rule;

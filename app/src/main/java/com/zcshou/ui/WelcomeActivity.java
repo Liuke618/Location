@@ -1,4 +1,4 @@
-package com.zcshou.gogogo;
+package com.zcshou.ui;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -31,6 +31,8 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.preference.PreferenceManager;
 
 import com.zcshou.utils.GoUtils;
+import com.zcshou.gogogo.R;
+import com.zcshou.ui.map.MainActivity;
 
 import java.util.ArrayList;
 

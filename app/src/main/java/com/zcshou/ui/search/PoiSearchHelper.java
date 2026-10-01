@@ -1,4 +1,4 @@
-package com.zcshou.gogogo.search;
+package com.zcshou.ui.search;
 
 import androidx.annotation.NonNull;
 

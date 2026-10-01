@@ -1,9 +1,12 @@
-package com.zcshou.gogogo;
+package com.zcshou.ui.settings;
 
 import android.os.Bundle;
 import android.view.MenuItem;
 
 import androidx.appcompat.app.ActionBar;
+
+import com.zcshou.gogogo.BaseActivity;
+import com.zcshou.gogogo.R;
 
 public class SettingsActivity extends BaseActivity {
 

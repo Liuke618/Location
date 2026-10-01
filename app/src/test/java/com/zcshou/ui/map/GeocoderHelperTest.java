@@ -1,4 +1,4 @@
-package com.zcshou.gogogo.map;
+package com.zcshou.ui.map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;

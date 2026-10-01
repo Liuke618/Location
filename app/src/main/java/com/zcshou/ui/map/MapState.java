@@ -1,4 +1,4 @@
-package com.zcshou.gogogo.map;
+package com.zcshou.ui.map;
 
 import com.baidu.mapapi.map.BitmapDescriptor;
 import com.baidu.mapapi.map.BitmapDescriptorFactory;

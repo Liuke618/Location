@@ -1,4 +1,4 @@
-package com.zcshou.gogogo;
+package com.zcshou.ui.settings;
 
 import android.os.Bundle;
 import android.text.InputType;
@@ -12,6 +12,7 @@ import androidx.preference.SwitchPreferenceCompat;
 import com.baidu.mapapi.SDKInitializer;
 import com.elvishew.xlog.XLog;
 import com.zcshou.utils.GoUtils;
+import com.zcshou.gogogo.R;
 
 import java.util.Objects;
 

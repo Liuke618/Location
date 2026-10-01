@@ -1,4 +1,4 @@
-package com.zcshou.gogogo.location;
+package com.zcshou.ui.location;
 
 import android.content.Context;
 

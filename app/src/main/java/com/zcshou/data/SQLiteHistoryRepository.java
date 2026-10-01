@@ -6,8 +6,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.elvishew.xlog.XLog;
-import com.zcshou.database.DataBaseHistoryLocation;
-import com.zcshou.database.DataBaseHistorySearch;
+import com.zcshou.data.DataBaseHistoryLocation;
+import com.zcshou.data.DataBaseHistorySearch;
 
 import java.util.ArrayList;
 import java.util.HashMap;

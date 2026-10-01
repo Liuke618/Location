@@ -1,4 +1,4 @@
-package com.zcshou.gogogo;
+package com.zcshou.ui.history;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -33,7 +33,11 @@ import java.util.Map;
 
 import com.zcshou.data.HistoryRepository;
 import com.zcshou.data.HistoryRepository.LocationRow;
+import com.zcshou.gogogo.BaseActivity;
+import com.zcshou.gogogo.GoApplication;
+import com.zcshou.gogogo.R;
 import com.zcshou.utils.GoUtils;
+import com.zcshou.ui.map.MainActivity;
 
 public class HistoryActivity extends BaseActivity {
     public static final String KEY_ID = "KEY_ID";

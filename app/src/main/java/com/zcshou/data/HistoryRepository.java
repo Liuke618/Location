@@ -1,6 +1,6 @@
 package com.zcshou.data;
 
-import com.zcshou.database.DataBaseHistorySearch;
+import com.zcshou.data.DataBaseHistorySearch;
 
 import java.util.List;
 import java.util.Map;

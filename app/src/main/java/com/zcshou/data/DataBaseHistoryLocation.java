@@ -1,4 +1,4 @@
-package com.zcshou.database;
+package com.zcshou.data;
 
 import android.content.ContentValues;
 import android.content.Context;

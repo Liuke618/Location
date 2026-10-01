@@ -30,7 +30,7 @@ import androidx.core.content.ContextCompat;
 
 import com.elvishew.xlog.XLog;
 import com.zcshou.domain.LocationMath;
-import com.zcshou.gogogo.MainActivity;
+import com.zcshou.ui.map.MainActivity;
 import com.zcshou.gogogo.R;
 import com.zcshou.joystick.JoyStick;
 

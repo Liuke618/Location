@@ -1,4 +1,4 @@
-package com.zcshou.gogogo;
+package com.zcshou.ui.map;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.baidu.mapapi.model.LatLng;
-import com.zcshou.gogogo.map.MapState;
+import com.zcshou.ui.map.MapState;
 
 import java.util.List;
 import java.util.Map;

@@ -78,7 +78,7 @@
         </provider>
 
         <activity
-            android:name=".WelcomeActivity"
+            android:name="com.zcshou.ui.WelcomeActivity"
             android:exported="true"
             android:theme="@style/AppTheme.NoActionBar"
             >
@@ -89,18 +89,18 @@
         </activity>
 
         <activity
-            android:name=".MainActivity"
+            android:name="com.zcshou.ui.map.MainActivity"
             android:launchMode="singleInstance"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar" />
 
         <activity
-            android:name=".SettingsActivity"
+            android:name="com.zcshou.ui.settings.SettingsActivity"
             android:label="@string/app_settings"
             android:exported="false" />
 
         <activity
-            android:name=".HistoryActivity"
+            android:name="com.zcshou.ui.history.HistoryActivity"
             android:label="@string/app_history"
             android:exported="false" />
 
