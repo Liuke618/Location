@@ -37,7 +37,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: 'adopt'
+          distribution: 'temurin'
           cache: gradle
       # 创建 local.properties 文件
       - name: Create local.properties
