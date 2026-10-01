@@ -124,7 +124,9 @@ public class WelcomeActivity extends AppCompatActivity {
          * 读写权限和电话状态权限非必要权限(建议授予)只会申请一次，用户同意或者禁止，只会弹一次
          */
         // 读写权限
-        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+        // Android 13+ 起 READ_EXTERNAL_STORAGE 被系统自动拒绝，申请会阻塞主流程
+        if (Build.VERSION.SDK_INT < 33
+                && checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ReqPermissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
         }
 
