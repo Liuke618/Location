@@ -20,10 +20,14 @@ import android.view.View;
 import android.view.Window;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.preference.PreferenceManager;
 
 import com.zcshou.utils.GoUtils;
@@ -49,6 +53,18 @@ public class WelcomeActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_welcome);
+
+        // edge-to-edge 强制后,底部协议勾选框避开导航栏
+        View checkAgreement = findViewById(R.id.check_agreement);
+        int margin20dp = (int) (20 * getResources().getDisplayMetrics().density);
+        int margin8dp = (int) (8 * getResources().getDisplayMetrics().density);
+        ViewCompat.setOnApplyWindowInsetsListener(checkAgreement, (v, windowInsets) -> {
+            Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) v.getLayoutParams();
+            lp.bottomMargin = Math.max(margin20dp, bars.bottom + margin8dp);
+            v.setLayoutParams(lp);
+            return windowInsets;
+        });
 
         // 生成默认参数的值（一定要尽可能早的调用，因为后续有些界面可能需要使用参数）
         PreferenceManager.setDefaultValues(this, R.xml.preferences_main, false);
