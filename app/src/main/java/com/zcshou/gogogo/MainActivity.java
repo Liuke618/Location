@@ -62,9 +62,6 @@ import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.search.core.SearchResult;
 import com.baidu.mapapi.search.geocode.GeoCodeResult;
-import com.baidu.mapapi.search.geocode.GeoCoder;
-import com.baidu.mapapi.search.geocode.OnGetGeoCoderResultListener;
-import com.baidu.mapapi.search.geocode.ReverseGeoCodeOption;
 import com.baidu.mapapi.search.geocode.ReverseGeoCodeResult;
 import com.baidu.mapapi.search.sug.SuggestionResult;
 import com.baidu.mapapi.search.sug.SuggestionSearch;
@@ -89,6 +86,7 @@ import com.zcshou.service.ServiceGoController;
 import com.zcshou.data.HistoryRepository;
 import com.zcshou.data.HistoryRepository.LocationRow;
 import com.zcshou.data.HistoryRepository.SearchRow;
+import com.zcshou.gogogo.map.GeocoderHelper;
 import com.zcshou.gogogo.map.MapController;
 import com.zcshou.gogogo.map.MapState;
 import com.zcshou.utils.ShareUtils;
@@ -120,7 +118,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     private MapController mMapController;
     // showLocation 静态门面委托的当前控制器（onCreate 中赋值，onDestroy 中清空）
     private static MapController sMapController = null;
-    private GeoCoder mGeoCoder;
+    private GeocoderHelper mGeocoderHelper;
     private SensorManager mSensorManager;
     private Sensor mSensorAccelerometer;
     private Sensor mSensorMagnetic;
@@ -465,8 +463,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         ibShare.setOnClickListener(v -> ShareUtils.shareText(MainActivity.this, "分享位置", poiLongitude.getText()+","+poiLatitude.getText()));
         ImageButton ibFly = poiView.findViewById(R.id.poi_fly);
         ibFly.setOnClickListener(this::doGoLocation);
-        mGeoCoder = GeoCoder.newInstance();
-        mGeoCoder.setOnGetGeoCodeResultListener(new OnGetGeoCoderResultListener() {
+        // SDK GeoCoder 构造与监听注册收编于 GeocoderHelper，回调体保留在此（渲染与状态写入逻辑原样）
+        mGeocoderHelper = new GeocoderHelper();
+        mGeocoderHelper.initSdk(new GeocoderHelper.SdkGeoCoderListener() {
             @Override
             public void onGetGeoCodeResult(GeoCodeResult geoCodeResult) {
                 XLog.i(geoCodeResult.getLocation());
@@ -526,7 +525,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     public void onMapLongClick(double lng, double lat) {
         mMapState.setSelectedPoint(new LatLng(lat, lng));
         mMapController.markMap();
-        mGeoCoder.reverseGeoCode(new ReverseGeoCodeOption().location(new LatLng(lat, lng)));
+        mGeocoderHelper.reverseBySdk(new LatLng(lat, lng));
     }
 
     /**
@@ -795,58 +794,37 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
 
     /*============================== 历史记录 相关 ==============================*/
 
-    // 记录请求的位置信息
+    // 记录请求的位置信息（REST 逆地理 HTTP 与解析收编于 GeocoderHelper，落库行构造保留在此）
     private void recordCurrentLocation(double lng, double lat) {
         //参数坐标系：bd09
         final String safeCode = BuildConfig.MAPS_SAFE_CODE;
         final String ak = sharedPreferences.getString("setting_map_key", BuildConfig.MAPS_API_KEY);
-        double[] latLng = MapUtils.bd2wgs(lng, lat);
-        //bd09坐标的位置信息
-        String mapApiUrl = "https://api.map.baidu.com/reverse_geocoding/v3/?ak=" + ak + "&output=json&coordtype=bd09ll" + "&location=" + lat + "," + lng + "&mcode=" + safeCode;
+        final double[] latLng = MapUtils.bd2wgs(lng, lat);
 
-        okhttp3.Request request = new okhttp3.Request.Builder().url(mapApiUrl).get().build();
-        final Call call = mOkHttpClient.newCall(request);
-        call.enqueue(new Callback() {
+        mGeocoderHelper.resolveAddress(lng, lat, ak, safeCode, new GeocoderHelper.AddressCallback() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                //http 请求失败
-                XLog.e("HTTP: HTTP GET FAILED");
-                //插表参数
-                LocationRow locationRow = new LocationRow(mMapState.getMarkName(), String.valueOf(latLng[0]), String.valueOf(latLng[1]),
-                        System.currentTimeMillis() / 1000, Double.toString(lng), Double.toString(lat));
-
-                mHistoryRepository.addLocationRow(locationRow);
+            public void onHttpFailure() {
+                //http 请求失败：与原 onFailure 一致，以标记名落库（回调线程模型不变，不切 UI 线程）
+                addLocationHistoryRow(mMapState.getMarkName(), latLng, lng, lat);
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                ResponseBody responseBody = response.body();
-                if (responseBody != null) {
-                    String resp = responseBody.string();
-                    try {
-                        JSONObject getRetJson = new JSONObject(resp);
-
-                        if (Integer.parseInt(getRetJson.getString("status")) == 0) { // 位置获取成功
-                            JSONObject posInfoJson = getRetJson.getJSONObject("result");
-                            String formatted_address = posInfoJson.getString("formatted_address");
-                            LocationRow locationRow = new LocationRow(formatted_address, String.valueOf(latLng[0]), String.valueOf(latLng[1]),
-                                    System.currentTimeMillis() / 1000, Double.toString(lng), Double.toString(lat));
-                            mHistoryRepository.addLocationRow(locationRow);
-                        } else {
-                            LocationRow locationRow = new LocationRow(mMapState.getMarkName() == null ? getRetJson.getString("message") : mMapState.getMarkName(), String.valueOf(latLng[0]), String.valueOf(latLng[1]),
-                                    System.currentTimeMillis() / 1000, Double.toString(lng), Double.toString(lat));
-                            mHistoryRepository.addLocationRow(locationRow);
-                        }
-                    } catch (JSONException e) {
-                        XLog.e("JSON: resolve json error");
-                        // 原代码此处连续两次 put LOCATION（先默认名，再被 mMarkName 覆盖），最终落库值即 mMarkName，此处按最终值保留现状行为
-                        LocationRow locationRow = new LocationRow(mMapState.getMarkName(), String.valueOf(latLng[0]), String.valueOf(latLng[1]),
-                                System.currentTimeMillis() / 1000, Double.toString(lng), Double.toString(lat));
-                        mHistoryRepository.addLocationRow(locationRow);
-                    }
-                }
+            public void onResponseBody(String resp) {
+                // 响应解析三分支收敛于纯函数 parseAddress；回退默认名与原实现一致取自资源
+                String address = GeocoderHelper.parseAddress(resp, mMapState.getMarkName(),
+                        getResources().getString(R.string.history_location_default_name),
+                        getResources().getString(R.string.history_location_default_name));
+                addLocationHistoryRow(address, latLng, lng, lat);
             }
         });
+    }
+
+    // 插表参数：LocationRow 字段与原 ContentValues puts 逐字段对应（WGS84 经纬度、秒级时间戳、bd09 原坐标）
+    private void addLocationHistoryRow(String location, double[] wgsLatLng, double lng, double lat) {
+        LocationRow locationRow = new LocationRow(location, String.valueOf(wgsLatLng[0]), String.valueOf(wgsLatLng[1]),
+                System.currentTimeMillis() / 1000, Double.toString(lng), Double.toString(lat));
+
+        mHistoryRepository.addLocationRow(locationRow);
     }
 
     /*============================== SearchView 相关 ==============================*/
