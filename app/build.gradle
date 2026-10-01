@@ -1,7 +1,17 @@
 plugins {
     id "com.android.application"
-    // 谷歌官方推荐的用于隐藏地图 KEY 的插件 https://developers.google.com/maps/documentation/places/android-sdk/secrets-gradle-plugin?hl=zh-cn
-    id "com.google.android.libraries.mapsplatform.secrets-gradle-plugin"
+}
+
+// 从 local.properties 读取百度地图密钥并注入 BuildConfig(替代 secrets-gradle-plugin,键名与 CI 注入方式保持不变)
+def localProps = new Properties()
+def localPropsFile = rootProject.file('local.properties')
+if (localPropsFile.exists()) {
+    localPropsFile.withInputStream { localProps.load(it) }
+}
+def mapsApiKey = localProps.getProperty('MAPS_API_KEY', '')
+def mapsSafeCode = localProps.getProperty('MAPS_SAFE_CODE', '')
+if (mapsApiKey.isEmpty()) {
+    logger.warn('MAPS_API_KEY 未在 local.properties 中配置,百度地图运行时将无法初始化')
 }
 
 android {
@@ -31,6 +41,8 @@ android {
         versionCode 1123
         versionName '1.12.3' // https://semver.org/lang/zh-CN/
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField 'String', 'MAPS_API_KEY', "\"${mapsApiKey}\""
+        buildConfigField 'String', 'MAPS_SAFE_CODE', "\"${mapsSafeCode}\""
         ndk {
             //noinspection ChromeOsAbiSupport
             abiFilters "arm64-v8a"
