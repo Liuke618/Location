@@ -40,6 +40,7 @@ import android.widget.RadioGroup;
 import android.widget.SimpleAdapter;
 import android.widget.TextView;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
@@ -169,6 +170,14 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // predictive back(targetSdk 36 默认启用):迁移到 OnBackPressedDispatcher,保持"返回即退后台"行为
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                moveTaskToBack(false);
+            }
+        });
+
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -266,11 +275,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
         mSearchHistoryDB.close();
 
         super.onDestroy();
-    }
-
-    @Override
-    public void onBackPressed() {
-        moveTaskToBack(false);
     }
 
     @Override
