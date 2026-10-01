@@ -15,7 +15,7 @@ if (mapsApiKey.isEmpty()) {
 }
 
 android {
-    compileSdk = 32
+    compileSdk = 36
     namespace = 'com.zcshou.gogogo'
 
     signingConfigs {
@@ -36,8 +36,7 @@ android {
     defaultConfig {
         applicationId "com.zcshou.gogogo"
         minSdk 31
-        //noinspection ExpiredTargetSdkVersion
-        targetSdk 32
+        targetSdk 36
         versionCode 1123
         versionName '1.12.3' // https://semver.org/lang/zh-CN/
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
