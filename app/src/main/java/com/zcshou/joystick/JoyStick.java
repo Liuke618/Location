@@ -513,7 +513,7 @@ public class JoyStick extends View {
                     try {
                         mSuggestionSearch.requestSuggestion((new SuggestionSearchOption())
                                 .keyword(newText)
-                                .city(MainActivity.mCurrentCity)
+                                .city(((GoApplication) mContext.getApplicationContext()).getAppContainer().getMapState().getCurrentCity())
                         );
                     } catch (Exception e) {
                         GoUtils.DisplayToast(mContext,getResources().getString(R.string.app_error_search));
@@ -647,7 +647,7 @@ public class JoyStick extends View {
     private void markBaiduMap(LatLng latLng) {
         mMarkMapLngLat = latLng;
 
-        MarkerOptions ooA = new MarkerOptions().position(latLng).icon(MainActivity.mMapIndicator);
+        MarkerOptions ooA = new MarkerOptions().position(latLng).icon(((GoApplication) mContext.getApplicationContext()).getAppContainer().getMapState().getMarkerIcon());
         mBaiduMap.clear();
         mBaiduMap.addOverlay(ooA);
 

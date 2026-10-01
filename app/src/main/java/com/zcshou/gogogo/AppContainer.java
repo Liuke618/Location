@@ -4,6 +4,7 @@ import android.content.Context;
 
 import com.zcshou.data.HistoryRepository;
 import com.zcshou.data.SQLiteHistoryRepository;
+import com.zcshou.gogogo.map.MapState;
 
 /**
  * 应用级依赖容器：惰性创建跨页面共享的单例依赖。
@@ -11,6 +12,7 @@ import com.zcshou.data.SQLiteHistoryRepository;
 public class AppContainer {
     private final Context mAppContext;
     private HistoryRepository mHistoryRepository;
+    private MapState mMapState;
 
     public AppContainer(Context appContext) {
         mAppContext = appContext.getApplicationContext();
@@ -21,5 +23,12 @@ public class AppContainer {
             mHistoryRepository = new SQLiteHistoryRepository(mAppContext);
         }
         return mHistoryRepository;
+    }
+
+    public synchronized MapState getMapState() {
+        if (mMapState == null) {
+            mMapState = new MapState();
+        }
+        return mMapState;
     }
 }
