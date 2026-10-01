@@ -36,6 +36,7 @@ import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.preference.PreferenceManager;
 
 import com.baidu.location.BDLocation;
@@ -85,6 +86,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     public static final String POI_LATITUDE = PoiSearchHelper.POI_LATITUDE;
 
     private SharedPreferences sharedPreferences;
+    //主界面状态持有器（Factory 构造注入 AppContainer 单例 MapState）：仅状态镜像，渲染路径保持直接调用不变
+    private MainViewModel mMainViewModel;
 
     /*============================== 主界面地图 相关 ==============================*/
     /************** 地图 *****************/
@@ -148,6 +151,10 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         XLog.i("MainActivity: onCreate");
 
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+
+        //MapState 获取自 initMap 提前至此：主界面状态持有器构造注入同一 AppContainer 单例
+        mMapState = ((GoApplication) getApplicationContext()).getAppContainer().getMapState();
+        mMainViewModel = new ViewModelProvider(this, new MainViewModel.Factory(mMapState)).get(MainViewModel.class);
 
         initNavigationView();
 
@@ -243,29 +250,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
             @Override
             public boolean onMenuItemActionExpand(MenuItem item) {
                 mSearchLayout.setVisibility(View.INVISIBLE);
-                //展示搜索历史（历史行读取收编于 PoiSearchHelper，SimpleAdapter 渲染属 UI 保留在此）
-                List<Map<String, Object>> data = mPoiSearchHelper.loadSearchHistoryRows();
-
-                if (!data.isEmpty()) {
-                    SimpleAdapter simAdapt = new SimpleAdapter(
-                            MainActivity.this,
-                            data,
-                            R.layout.search_item,
-                            new String[] {HistoryRepository.DB_COLUMN_KEY,
-                                    HistoryRepository.DB_COLUMN_DESCRIPTION,
-                                    HistoryRepository.DB_COLUMN_TIMESTAMP,
-                                    HistoryRepository.DB_COLUMN_IS_LOCATION,
-                                    HistoryRepository.DB_COLUMN_LONGITUDE_CUSTOM,
-                                    HistoryRepository.DB_COLUMN_LATITUDE_CUSTOM},
-                            new int[] {R.id.search_key,
-                                    R.id.search_description,
-                                    R.id.search_timestamp,
-                                    R.id.search_isLoc,
-                                    R.id.search_longitude,
-                                    R.id.search_latitude});
-                    mSearchHistoryList.setAdapter(simAdapt);
-                    mHistoryLayout.setVisibility(View.VISIBLE);
-                }
+                //展示搜索历史（历史行读取收编于 PoiSearchHelper，SimpleAdapter 渲染属 UI 保留在此；
+                //渲染块与长按删除后重取的渲染逐字一致，收编为共用方法 displaySearchHistory）
+                displaySearchHistory();
 
                 return true;  // Return true to expand action view
             }
@@ -398,8 +385,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
 
     /*============================== 主界面地图 相关 ==============================*/
     private void initMap() {
-        mMapState = ((GoApplication) getApplicationContext()).getAppContainer().getMapState();
-
         // 地图初始化（MapView/BaiduMap 的配置与点击监听注册收编于 MapController）
         MapView mapView = findViewById(R.id.bdMapView);
         mapView.showZoomControls(false);
@@ -446,6 +431,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                     XLog.i("逆地理位置失败!");
                 } else {
                     mMapState.setMarkName(String.valueOf(reverseGeoCodeResult.getAddress()));
+                    //镜像 GeocoderHelper SDK 逆地理结果（行为冻结：渲染路径不变，仅补状态镜像）
+                    mMainViewModel.postCurrentAddress(String.valueOf(reverseGeoCodeResult.getAddress()));
                     poiLatitude.setText(String.valueOf(reverseGeoCodeResult.getLocation().latitude));
                     poiLongitude.setText(String.valueOf(reverseGeoCodeResult.getLocation().longitude));
                     poiAddress.setText(reverseGeoCodeResult.getAddress());
@@ -474,7 +461,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
      */
     @Override
     public void onMapClick(double lng, double lat) {
-        mMapState.setSelectedPoint(new LatLng(lat, lng));
+        mMainViewModel.selectPoint(new LatLng(lat, lng));
         mMapController.markMap();
     }
 
@@ -483,7 +470,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
      */
     @Override
     public void onPoiClick(MapPoi poi) {
-        mMapState.setSelectedPoint(poi.getPosition());
+        mMainViewModel.selectPoint(poi.getPosition());
         mMapController.markMap();
     }
 
@@ -492,7 +479,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
      */
     @Override
     public void onMapLongClick(double lng, double lat) {
-        mMapState.setSelectedPoint(new LatLng(lat, lng));
+        mMainViewModel.selectPoint(new LatLng(lat, lng));
         mMapController.markMap();
         mGeocoderHelper.reverseBySdk(new LatLng(lat, lng));
     }
@@ -534,7 +521,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
             if (isFirstLoc) {
                 isFirstLoc = false;
                 // 这里记录百度地图返回的位置
-                mMapState.setSelectedPoint(new LatLng(bdLocation.getLatitude(), bdLocation.getLongitude()));
+                mMainViewModel.selectPoint(new LatLng(bdLocation.getLatitude(), bdLocation.getLongitude()));
                 MapStatus.Builder builder = new MapStatus.Builder();
                 builder.target(mMapState.getSelectedPoint()).zoom(18.0f);
                 mMapController.getBaiduMap().animateMapStatus(MapStatusUpdateFactory.newMapStatus(builder.build()));
@@ -605,10 +592,10 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                             GoUtils.DisplayToast(MainActivity.this,  getResources().getString(R.string.app_error_latitude));
                         } else {
                             if (rbBD.isChecked()) {
-                                mMapState.setSelectedPoint(new LatLng(dialog_lat_double, dialog_lng_double));
+                                mMainViewModel.selectPoint(new LatLng(dialog_lat_double, dialog_lng_double));
                             } else {
                                 double[] bdLonLat = MapUtils.wgs2bd09(dialog_lat_double, dialog_lng_double);
-                                mMapState.setSelectedPoint(new LatLng(bdLonLat[1], bdLonLat[0]));
+                                mMainViewModel.selectPoint(new LatLng(bdLonLat[1], bdLonLat[0]));
                             }
                             mMapState.setMarkName("手动输入的坐标");
 
@@ -664,6 +651,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         if (mMockController.isRunning()) {
             if (mMapState.getSelectedPoint() == null) {
                 mMockController.stop();
+                //镜像模拟运行状态（MockLocationController 无回调，由调用点通知）
+                mMainViewModel.setMockRunning(false);
                 Snackbar.make(v, "模拟位置已终止", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
                 mButtonStart.setImageResource(R.drawable.ic_position);
@@ -677,7 +666,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
 
                 mMapController.getBaiduMap().clear();
-                mMapState.clearSelectedPoint();
+                mMainViewModel.clearSelectedPoint();
 
                 if (GoUtils.isWifiEnabled(MainActivity.this)) {
                     GoUtils.showDisableWifiDialog(MainActivity.this);
@@ -695,13 +684,15 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                     double[] latLng = MapUtils.bd2wgs(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
                     double alt = Double.parseDouble(sharedPreferences.getString("setting_altitude", "55.0"));
                     mMockController.start(latLng[0], latLng[1], alt);
+                    //镜像模拟运行状态（MockLocationController 无回调，由调用点通知）
+                    mMainViewModel.setMockRunning(true);
                     mButtonStart.setImageResource(R.drawable.ic_fly);
                     Snackbar.make(v, "模拟位置已启动", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show();
 
                     recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
                     mMapController.getBaiduMap().clear();
-                    mMapState.clearSelectedPoint();
+                    mMainViewModel.clearSelectedPoint();
 
                     if (GoUtils.isWifiEnabled(MainActivity.this)) {
                         GoUtils.showDisableWifiDialog(MainActivity.this);
@@ -733,6 +724,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 String address = GeocoderHelper.parseAddress(resp, mMapState.getMarkName(),
                         getResources().getString(R.string.history_location_default_name),
                         getResources().getString(R.string.history_location_default_name));
+                //镜像 GeocoderHelper REST 逆地理结果（行为冻结：落库路径不变，仅补状态镜像）
+                mMainViewModel.postCurrentAddress(address);
                 addLocationHistoryRow(address, latLng, lng, lat);
             }
         });
@@ -747,6 +740,32 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     }
 
     /*============================== SearchView 相关 ==============================*/
+    //展示搜索历史（onMenuItemActionExpand 与长按删除后重取两处渲染块逐字一致，原样收编为共用方法）
+    private void displaySearchHistory() {
+        List<Map<String, Object>> data = mPoiSearchHelper.loadSearchHistoryRows();
+
+        if (!data.isEmpty()) {
+            SimpleAdapter simAdapt = new SimpleAdapter(
+                    MainActivity.this,
+                    data,
+                    R.layout.search_item,
+                    new String[] {HistoryRepository.DB_COLUMN_KEY,
+                            HistoryRepository.DB_COLUMN_DESCRIPTION,
+                            HistoryRepository.DB_COLUMN_TIMESTAMP,
+                            HistoryRepository.DB_COLUMN_IS_LOCATION,
+                            HistoryRepository.DB_COLUMN_LONGITUDE_CUSTOM,
+                            HistoryRepository.DB_COLUMN_LATITUDE_CUSTOM},
+                    new int[] {R.id.search_key,
+                            R.id.search_description,
+                            R.id.search_timestamp,
+                            R.id.search_isLoc,
+                            R.id.search_longitude,
+                            R.id.search_latitude});
+            mSearchHistoryList.setAdapter(simAdapt);
+            mHistoryLayout.setVisibility(View.VISIBLE);
+        }
+    }
+
     private void initSearchView() {
         mSearchLayout = findViewById(R.id.search_linear);
         mHistoryLayout = findViewById(R.id.search_history_linear);
@@ -756,7 +775,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
             String lng = ((TextView) view.findViewById(R.id.poi_longitude)).getText().toString();
             String lat = ((TextView) view.findViewById(R.id.poi_latitude)).getText().toString();
             mMapState.setMarkName(((TextView) view.findViewById(R.id.poi_name)).getText().toString());
-            mMapState.setSelectedPoint(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)));
+            mMainViewModel.selectPoint(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)));
             MapStatusUpdate mapstatusupdate = MapStatusUpdateFactory.newLatLng(mMapState.getSelectedPoint());
             mMapController.getBaiduMap().setMapStatus(mapstatusupdate);
 
@@ -782,7 +801,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 String lng = ((TextView) view.findViewById(R.id.search_longitude)).getText().toString();
                 String lat = ((TextView) view.findViewById(R.id.search_latitude)).getText().toString();
                 // mMarkName = ((TextView) view.findViewById(R.id.poi_name)).getText().toString();
-                mMapState.setSelectedPoint(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)));
+                mMainViewModel.selectPoint(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)));
                 MapStatusUpdate mapstatusupdate = MapStatusUpdateFactory.newLatLng(mMapState.getSelectedPoint());
                 mMapController.getBaiduMap().setMapStatus(mapstatusupdate);
 
@@ -816,24 +835,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                             //删除与历史行重取收编于 PoiSearchHelper，SimpleAdapter 渲染属 UI 保留在此
                             mPoiSearchHelper.deleteSearchHistory(searchKey);
                             //删除成功
-                            //展示搜索历史
-                            List<Map<String, Object>> data = mPoiSearchHelper.loadSearchHistoryRows();
-
-                            if (!data.isEmpty()) {
-                                SimpleAdapter simAdapt = new SimpleAdapter(
-                                        MainActivity.this,
-                                        data,
-                                        R.layout.search_item,
-                                        new String[] {HistoryRepository.DB_COLUMN_KEY,
-                                                HistoryRepository.DB_COLUMN_DESCRIPTION,
-                                                HistoryRepository.DB_COLUMN_TIMESTAMP,
-                                                HistoryRepository.DB_COLUMN_IS_LOCATION,
-                                                HistoryRepository.DB_COLUMN_LONGITUDE_CUSTOM,
-                                                HistoryRepository.DB_COLUMN_LATITUDE_CUSTOM}, // 与下面数组元素要一一对应
-                                        new int[] {R.id.search_key, R.id.search_description, R.id.search_timestamp, R.id.search_isLoc, R.id.search_longitude, R.id.search_latitude});
-                                mSearchHistoryList.setAdapter(simAdapt);
-                                mHistoryLayout.setVisibility(View.VISIBLE);
-                            }
+                            //展示搜索历史（渲染块与 onMenuItemActionExpand 逐字一致，收编为共用方法）
+                            displaySearchHistory();
                         } catch (Exception e) {
                             XLog.e("ERROR: delete database error");
                             GoUtils.DisplayToast(MainActivity.this,getResources().getString(R.string.history_delete_error));
@@ -855,6 +858,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
 
             @Override
             public void onSuggestionResult(List<Map<String, Object>> data) {
+                //镜像建议结果（行为冻结：渲染保持本回调线程直接渲染路径，时序不变，仅补状态镜像）
+                mMainViewModel.postSearchResults(data);
                 SimpleAdapter simAdapt = new SimpleAdapter(
                         MainActivity.this,
                         data,
