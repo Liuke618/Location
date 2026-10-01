@@ -72,15 +72,20 @@ public class ServiceGo extends Service {
     public void onCreate() {
         super.onCreate();
 
-        // Android 14+ 要求启动 location 类型前台服务前定位权限已授予
+        mLocManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+
+        // startForegroundService 启动的服务必须先提升为前台（FGS 契约），initNotification 须位于一切提前退出路径之前
+        initNotification();
+
+        // 定位权限缺失时无法以 location 类型提供前台服务，需停止服务；
+        // 但必须先 startForeground 再 stopSelf（FGS 契约），否则 Android 12+ 抛 ForegroundServiceDidNotStartInTimeException
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             XLog.e("SERVICEGO: ERROR - location permission not granted, stop service");
+            stopForeground(STOP_FOREGROUND_REMOVE);
             stopSelf();
             return;
         }
-
-        mLocManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
 
         removeTestProviderNetwork();
         addTestProviderNetwork();
@@ -89,8 +94,6 @@ public class ServiceGo extends Service {
         addTestProviderGPS();
 
         initGoLocation();
-
-        initNotification();
 
         initJoyStick();
     }
