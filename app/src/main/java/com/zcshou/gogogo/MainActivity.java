@@ -4,11 +4,9 @@ import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -16,7 +14,6 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.Gravity;
@@ -90,7 +87,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.zcshou.service.ServiceGo;
+import com.zcshou.service.MockLocationController;
+import com.zcshou.service.ServiceGoController;
 import com.zcshou.data.HistoryRepository;
 import com.zcshou.data.HistoryRepository.LocationRow;
 import com.zcshou.data.HistoryRepository.SearchRow;
@@ -109,10 +107,6 @@ import okhttp3.ResponseBody;
 
 public class MainActivity extends BaseActivity implements SensorEventListener {
     /* 对外 */
-    public static final String LAT_MSG_ID = "LAT_VALUE";
-    public static final String LNG_MSG_ID = "LNG_VALUE";
-    public static final String ALT_MSG_ID = "ALT_VALUE";
-
     public static final String POI_NAME = "POI_NAME";
     public static final String POI_ADDRESS = "POI_ADDRESS";
     public static final String POI_LONGITUDE = "POI_LONGITUDE";
@@ -143,9 +137,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     private double mCurrentLon = 0.0;       // 当前位置的百度经度
     private float mCurrentDirection = 0.0f;
     private boolean isFirstLoc = true; // 是否首次定位
-    private boolean isMockServStart = false;
-    private ServiceGo.ServiceGoBinder mServiceBinder;
-    private ServiceConnection mConnection;
+    private MockLocationController mMockController;
     private FloatingActionButton mButtonStart;
     /*============================== 历史记录 相关 ==============================*/
     private HistoryRepository mHistoryRepository;
@@ -200,17 +192,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
 
         initGoBtn();
 
-        mConnection = new ServiceConnection() {
-            @Override
-            public void onServiceConnected(ComponentName name, IBinder service) {
-                mServiceBinder = (ServiceGo.ServiceGoBinder)service;
-            }
-
-            @Override
-            public void onServiceDisconnected(ComponentName name) {
-
-            }
-        };
+        //模拟位置控制器：随 Activity 创建，随 Activity 一起废弃（生命周期约定见 ServiceGoController）
+        mMockController = new ServiceGoController(this);
 
         mHistoryRepository = ((GoApplication) getApplicationContext()).getAppContainer().getHistoryRepository();
 
@@ -250,10 +233,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     protected void onDestroy() {
         XLog.i("MainActivity: onDestroy");
 
-        if (isMockServStart) {
-            unbindService(mConnection); // 解绑服务，服务要记得解绑，不要造成内存泄漏
-            Intent serviceGoIntent = new Intent(MainActivity.this, ServiceGo.class);
-            stopService(serviceGoIntent);
+        if (mMockController.isRunning()) {
+            mMockController.stop(); // 解绑服务并停止前台服务，服务要记得解绑，不要造成内存泄漏
         }
         unregisterReceiver(mDownloadBdRcv);
 
@@ -782,28 +763,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
         mButtonStart.setOnClickListener(this::doGoLocation);
     }
 
-    private void startGoLocation() {
-        Intent serviceGoIntent = new Intent(MainActivity.this, ServiceGo.class);
-        bindService(serviceGoIntent, mConnection, BIND_AUTO_CREATE);    // 绑定服务和活动，之后活动就可以去调服务的方法了
-        double[] latLng = MapUtils.bd2wgs(mMarkLatLngMap.longitude, mMarkLatLngMap.latitude);
-        serviceGoIntent.putExtra(LNG_MSG_ID, latLng[0]);
-        serviceGoIntent.putExtra(LAT_MSG_ID, latLng[1]);
-        double alt = Double.parseDouble(sharedPreferences.getString("setting_altitude", "55.0"));
-        serviceGoIntent.putExtra(ALT_MSG_ID, alt);
-
-        startForegroundService(serviceGoIntent);
-        XLog.d("startForegroundService: ServiceGo");
-
-        isMockServStart = true;
-    }
-
-    private void stopGoLocation() {
-        unbindService(mConnection); // 解绑服务，服务要记得解绑，不要造成内存泄漏
-        Intent serviceGoIntent = new Intent(MainActivity.this, ServiceGo.class);
-        stopService(serviceGoIntent);
-        isMockServStart = false;
-    }
-
     private void doGoLocation(View v) {
         if (!GoUtils.isNetworkAvailable(this)) {
             GoUtils.DisplayToast(this, getResources().getString(R.string.app_error_network));
@@ -821,16 +780,16 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
             return;
         }
 
-        if (isMockServStart) {
+        if (mMockController.isRunning()) {
             if (mMarkLatLngMap == null) {
-                stopGoLocation();
+                mMockController.stop();
                 Snackbar.make(v, "模拟位置已终止", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
                 mButtonStart.setImageResource(R.drawable.ic_position);
             } else {
                 double[] latLng = MapUtils.bd2wgs(mMarkLatLngMap.longitude, mMarkLatLngMap.latitude);
                 double alt = Double.parseDouble(sharedPreferences.getString("setting_altitude", "55.0"));
-                mServiceBinder.setPosition(latLng[0], latLng[1], alt);
+                mMockController.setPosition(latLng[0], latLng[1], alt);
                 Snackbar.make(v, "已传送到新位置", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
 
@@ -852,7 +811,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
                     Snackbar.make(v, "请先点击地图位置或者搜索位置", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show();
                 } else {
-                    startGoLocation();
+                    double[] latLng = MapUtils.bd2wgs(mMarkLatLngMap.longitude, mMarkLatLngMap.latitude);
+                    double alt = Double.parseDouble(sharedPreferences.getString("setting_altitude", "55.0"));
+                    mMockController.start(latLng[0], latLng[1], alt);
                     mButtonStart.setImageResource(R.drawable.ic_fly);
                     Snackbar.make(v, "模拟位置已启动", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show();

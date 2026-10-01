@@ -100,9 +100,9 @@ public class ServiceGo extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        mCurLng = intent.getDoubleExtra(MainActivity.LNG_MSG_ID, DEFAULT_LNG);
-        mCurLat = intent.getDoubleExtra(MainActivity.LAT_MSG_ID, DEFAULT_LAT);
-        mCurAlt = intent.getDoubleExtra(MainActivity.ALT_MSG_ID, DEFAULT_ALT);
+        mCurLng = intent.getDoubleExtra(ServiceGoController.LNG_MSG_ID, DEFAULT_LNG);
+        mCurLat = intent.getDoubleExtra(ServiceGoController.LAT_MSG_ID, DEFAULT_LAT);
+        mCurAlt = intent.getDoubleExtra(ServiceGoController.ALT_MSG_ID, DEFAULT_ALT);
 
         if (mJoyStick != null) {
             mJoyStick.setCurrentPosition(mCurLng, mCurLat, mCurAlt);
