@@ -17,31 +17,19 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!-- targetSdk 34+ 前台定位服务必需 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Android 13+ 通知运行时权限 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
 
-    <uses-permission android:name="android.permission.REPLACE_EXISTING_PACKAGE"/>
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
 
     <!-- 允许程序打开网络套接字 -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- 允许挂载和反挂载文件系统可移动存储 -->
-    <uses-permission
-        android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS"
-        tools:ignore="ProtectedPermissions" />
-    <!-- 允许程序读取底层系统日志文件 -->
-    <uses-permission
-        android:name="android.permission.READ_LOGS"
-        tools:ignore="ProtectedPermissions" />
     <!-- 允许访问振动设备 -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- 允许使用PowerManager的 WakeLocks保持进程在休眠时从屏幕消失 -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- 允许程序读取或写入系统设置 -->
-    <uses-permission
-        android:name="android.permission.WRITE_SETTINGS"
-        tools:ignore="ProtectedPermissions" />
     <!-- 允许程序创建模拟位置提供用于测试 -->
     <uses-permission
         android:name="android.permission.ACCESS_MOCK_LOCATION"
@@ -63,10 +51,12 @@
             android:required="false" />
 
         <!-- 百度地图 间隔定位必须配置此service否则功能无效 -->
+        <!-- targetSdk 34+ 前台服务需声明类型；SDK内部若调用startForeground缺少类型会崩溃，未使用时声明无副作用 -->
         <service
             android:name="com.baidu.location.f"
             android:enabled="true"
             android:exported="false"
+            android:foregroundServiceType="location"
             android:process=":remote" />
 
         <service
