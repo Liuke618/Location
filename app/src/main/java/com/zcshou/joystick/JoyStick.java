@@ -35,6 +35,7 @@ import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.search.sug.SuggestionSearch;
 import com.baidu.mapapi.search.sug.SuggestionSearchOption;
 import com.zcshou.database.DataBaseHistoryLocation;
+import com.zcshou.domain.LocationMath;
 import com.zcshou.gogogo.HistoryActivity;
 import com.zcshou.gogogo.MainActivity;
 import com.zcshou.gogogo.R;
@@ -260,8 +261,9 @@ public class JoyStick extends View {
             @Override
             public void onFinish() {
                 // 注意：这里的 x y 与 圆中角度的对应问题（以 X 轴正向为 0 度）且转换为 km
-                disLng = mSpeed * (double)(DivGo / 1000) * mR * Math.cos(mAngle * 2 * Math.PI / 360) / 1000;// 注意安卓中的三角函数使用的是弧度
-                disLat = mSpeed * (double)(DivGo / 1000) * mR * Math.sin(mAngle * 2 * Math.PI / 360) / 1000;// 注意安卓中的三角函数使用的是弧度
+                double[] moveKm = LocationMath.moveVectorKm(mSpeed, (double)(DivGo / 1000), mR, mAngle);
+                disLng = moveKm[0];
+                disLat = moveKm[1];
                 mListener.onMoveInfo(mSpeed, disLng, disLat, 90.0F-mAngle);
                 mTimer.start();
             }
@@ -385,8 +387,9 @@ public class JoyStick extends View {
                 mTimer.cancel();
                 isMove = false;
                 // 注意：这里的 x y 与 圆中角度的对应问题（以 X 轴正向为 0 度）且转换为 km
-                disLng = mSpeed * (double)(DivGo / 1000) * mR * Math.cos(mAngle * 2 * Math.PI / 360) / 1000;// 注意安卓中的三角函数使用的是弧度
-                disLat = mSpeed * (double)(DivGo / 1000) * mR * Math.sin(mAngle * 2 * Math.PI / 360) / 1000;// 注意安卓中的三角函数使用的是弧度
+                double[] moveKm = LocationMath.moveVectorKm(mSpeed, (double)(DivGo / 1000), mR, mAngle);
+                disLng = moveKm[0];
+                disLat = moveKm[1];
                 mListener.onMoveInfo(mSpeed, disLng, disLat, 90.0F-mAngle);
             }
         }

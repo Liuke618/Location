@@ -29,6 +29,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
 import com.elvishew.xlog.XLog;
+import com.zcshou.domain.LocationMath;
 import com.zcshou.gogogo.MainActivity;
 import com.zcshou.gogogo.R;
 import com.zcshou.joystick.JoyStick;
@@ -185,8 +186,8 @@ public class ServiceGo extends Service {
                 // Latitude: 1 deg = 110.574 km // 纬度的每度的距离大约为 110.574km
                 // Longitude: 1 deg = 111.320*cos(latitude) km  // 经度的每度的距离从0km到111km不等
                 // 具体见：http://wp.mlab.tw/?p=2200
-                mCurLng += disLng / (111.320 * Math.cos(Math.abs(mCurLat) * Math.PI / 180));
-                mCurLat += disLat / 110.574;
+                mCurLng += LocationMath.lngDelta(disLng, mCurLat);
+                mCurLat += LocationMath.latDelta(disLat);
                 mCurBea = (float) angle;
             }
 
