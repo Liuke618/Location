@@ -102,7 +102,9 @@ public class ServiceGo extends Service {
         mCurLat = intent.getDoubleExtra(MainActivity.LAT_MSG_ID, DEFAULT_LAT);
         mCurAlt = intent.getDoubleExtra(MainActivity.ALT_MSG_ID, DEFAULT_ALT);
 
-        mJoyStick.setCurrentPosition(mCurLng, mCurLat, mCurAlt);
+        if (mJoyStick != null) {
+            mJoyStick.setCurrentPosition(mCurLng, mCurLat, mCurAlt);
+        }
 
         return super.onStartCommand(intent, flags, startId);
     }
@@ -110,15 +112,26 @@ public class ServiceGo extends Service {
     @Override
     public void onDestroy() {
         isStop = true;
-        mLocHandler.removeMessages(HANDLER_MSG_ID);
-        mLocHandlerThread.quit();
+        // 定位权限缺失时 onCreate 提前返回，以下字段可能未初始化
+        if (mLocHandler != null) {
+            mLocHandler.removeMessages(HANDLER_MSG_ID);
+        }
+        if (mLocHandlerThread != null) {
+            mLocHandlerThread.quit();
+        }
 
-        mJoyStick.destroy();
+        if (mJoyStick != null) {
+            mJoyStick.destroy();
+        }
 
-        removeTestProviderNetwork();
-        removeTestProviderGPS();
+        if (mLocManager != null) {
+            removeTestProviderNetwork();
+            removeTestProviderGPS();
+        }
 
-        unregisterReceiver(mActReceiver);
+        if (mActReceiver != null) {
+            unregisterReceiver(mActReceiver);
+        }
         stopForeground(STOP_FOREGROUND_REMOVE);
 
         super.onDestroy();
