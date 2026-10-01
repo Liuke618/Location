@@ -15,6 +15,8 @@ if (mapsApiKey.isEmpty()) {
 }
 
 android {
+    // GradleDependency：SDK 37 已可用；compileSdk 升级需连动 AGP 兼容性评估，属行为变更，本分支锁定 36（分支既定决策）
+    //noinspection GradleDependency
     compileSdk = 36
     namespace = 'com.zcshou.gogogo'
 
@@ -36,6 +38,8 @@ android {
     defaultConfig {
         applicationId "com.zcshou.gogogo"
         minSdk 31
+        // OldTargetApi：targetSdk 37 需先完成新版行为变更适配，属行为变更，本分支锁定 36（分支既定决策）
+        //noinspection OldTargetApi
         targetSdk 36
         versionCode 1123
         versionName '1.12.3' // https://semver.org/lang/zh-CN/
@@ -75,7 +79,7 @@ android {
         }
     }
 
-    // 要存取 secret value 必須要使用到一個 BuildScript 的類別，默认会从 local.properties 中获取
+    // 启用 BuildConfig 以支持上面的 buildConfigField 内联注入（MAPS_API_KEY / MAPS_SAFE_CODE，值取自 local.properties）
     buildFeatures {
         buildConfig = true
     }
@@ -104,6 +108,14 @@ android {
         includeInApk = false
         includeInBundle = false
     }
+
+    // lint 基线仅登记 3 条无法就地注解的二进制文件告警（BaiduLBS_Android.jar 的 TrustAllX509TrustManager、
+    // icon_gcoding.webp/welcome.webp 的 IconLocation）：二者均为第三方二进制/位图文件，无法写入 @SuppressLint 或
+    // tools:ignore；IconLocation 的“改目录”建议会改变位图解码密度、造成渲染行为变化，故按“逐条登记”方式保留。
+    // 基线按 issue+位置逐条匹配，非整类禁用；除注释所列 3 条外不得新增条目。
+    lint {
+        baseline = file('lint-baseline.xml')
+    }
 }
 
 def apkBaseName = "Go_${android.defaultConfig.versionName}_arm64-v8a"
@@ -119,12 +131,14 @@ androidComponents {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    // AppCompat 1.5.1 开始显式依赖于 Lifecycle 2.5.1 和 SavedState 1.2.0
+    // AppCompat 1.8.0 依赖 Lifecycle/SavedState 传递库，这里显式声明 lifecycle-viewmodel 2.11.0 以固定版本
     implementation 'androidx.lifecycle:lifecycle-viewmodel:2.11.0'
     implementation 'androidx.appcompat:appcompat:1.8.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.2'
     implementation 'androidx.preference:preference:1.2.1'
     implementation 'com.google.android.material:material:1.14.0'
+    // NewerVersionAvailable：okhttp 5.x 为 Kotlin 重写的大版本升级，存在行为差异，暂维持 4.x 稳定线
+    //noinspection NewerVersionAvailable
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'com.elvishew:xlog:1.11.1'
     implementation 'io.noties.markwon:core:4.6.2'

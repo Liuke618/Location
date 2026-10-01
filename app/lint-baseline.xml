@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.4.1" type="baseline" client="gradle" dependencies="false" name="AGP (9.4.1)" variant="all" version="9.4.1">
+
+    <issue
+        id="TrustAllX509TrustManager"
+        message="`checkClientTrusted` is empty, which could cause insecure network traffic due to trusting arbitrary TLS/SSL certificates presented by peers">
+        <location
+            file="libs/BaiduLBS_Android.jar"/>
+    </issue>
+
+    <issue
+        id="IconLocation"
+        message="Found bitmap drawable `res/drawable/icon_gcoding.webp` in densityless folder">
+        <location
+            file="src/main/res/drawable/icon_gcoding.webp"/>
+    </issue>
+
+    <issue
+        id="IconLocation"
+        message="Found bitmap drawable `res/drawable/welcome.webp` in densityless folder">
+        <location
+            file="src/main/res/drawable/welcome.webp"/>
+    </issue>
+
+</issues>
