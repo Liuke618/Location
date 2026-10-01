@@ -1,7 +1,6 @@
 package com.zcshou.service;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -139,15 +138,13 @@ public class ServiceGo extends Service {
         super.onDestroy();
     }
 
-    // InlinedApi：RECEIVER_NOT_EXPORTED 为 API 33 常量，编译期内联；33 以下系统忽略未知 flag 位，保持既有降级行为
-    @SuppressLint("InlinedApi")
     private void initNotification() {
         mActReceiver = new NoteActionReceiver();
         IntentFilter filter = new IntentFilter();
         filter.addAction(SERVICE_GO_NOTE_ACTION_JOYSTICK_SHOW);
         filter.addAction(SERVICE_GO_NOTE_ACTION_JOYSTICK_HIDE);
-        // androidx.core 1.8.0 无 ContextCompat.RECEIVER_NOT_EXPORTED，改用平台常量（API 33+ 生效）
-        registerReceiver(mActReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        // androidx.core 1.16.0 起可用 ContextCompat.RECEIVER_NOT_EXPORTED（与平台常量行为一致）
+        ContextCompat.registerReceiver(this, mActReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         NotificationChannel mChannel = new NotificationChannel(SERVICE_GO_NOTE_CHANNEL_ID, SERVICE_GO_NOTE_CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT);
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);

@@ -1,6 +1,5 @@
 package com.zcshou.gogogo;
 
-import android.annotation.SuppressLint;
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
@@ -47,6 +46,7 @@ import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.preference.PreferenceManager;
@@ -1155,8 +1155,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     }
 
     /*============================== 更新 相关 ==============================*/
-    // InlinedApi：RECEIVER_NOT_EXPORTED 为 API 33 常量，编译期内联；33 以下系统忽略未知 flag 位，保持既有降级行为
-    @SuppressLint("InlinedApi")
     private void initUpdateVersion() {
         mDownloadManager =(DownloadManager) MainActivity.this.getSystemService(DOWNLOAD_SERVICE);
 
@@ -1168,7 +1166,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
             }
         };
         // targetSdk 34+ 非保护广播必须声明 exported 状态;DOWNLOAD_COMPLETE 由系统 DownloadManager 发出,NOT_EXPORTED 不影响接收
-        registerReceiver(mDownloadBdRcv, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mDownloadBdRcv, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     private void checkUpdateVersion(boolean result) {
