@@ -3,7 +3,6 @@
     <string name="app_settings">设置</string>
     <string name="app_history">历史记录</string>
     <string name="app_author">ZCShou</string>
-    <string name="app_email">zcsexp@gmail.com</string>
     <string name="app_statement">仅供学习使用，否则后果自负！</string>
     <string name="app_service_tips">影梭服务正在运行中</string>
     <string name="app_agreement">用户协议</string>
@@ -36,9 +35,6 @@
     <string name="app_error_location">请先选择位置</string>
     <string name="app_error_dev">开发者模式未开启，无法跳转！请自行搜索开启方法</string>
     <string name="app_error_param">非法参数</string>
-    <string name="app_error_protocol">请先阅读并接收用户协议</string>
-    <string name="app_error_username">用户名不合法</string>
-    <string name="app_error_code">注册码不能为空</string>
     <string name="app_error_longitude">经度超出限制!\n取值：-180.0 ~ 180.0</string>
     <string name="app_error_latitude">纬度超出限制!\n取值：-90.0 ~ 90.0</string>
     <string name="app_search_null">没有匹配结果，请重新搜索</string>
