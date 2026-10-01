@@ -1,12 +1,9 @@
 package com.zcshou.gogogo;
 
-import android.app.DownloadManager;
-import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -16,13 +13,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.TextUtils;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -40,7 +34,6 @@ import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.preference.PreferenceManager;
@@ -64,12 +57,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -82,18 +70,12 @@ import com.zcshou.gogogo.map.GeocoderHelper;
 import com.zcshou.gogogo.map.MapController;
 import com.zcshou.gogogo.map.MapState;
 import com.zcshou.gogogo.search.PoiSearchHelper;
+import com.zcshou.gogogo.update.UpdateManager;
 import com.zcshou.utils.ShareUtils;
 import com.zcshou.utils.GoUtils;
 import com.zcshou.utils.MapUtils;
 
 import com.elvishew.xlog.XLog;
-
-import io.noties.markwon.Markwon;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.OkHttpClient;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
 
 public class MainActivity extends BaseActivity implements SensorEventListener, MapController.MapEventListener, CurrentLocationSource.LocationListener {
     /* 对外（POI_* 键名为搜索结果 SimpleAdapter 列契约，随 getMapList 收编于 PoiSearchHelper，JoyStick 引用不受影响） */
@@ -102,7 +84,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     public static final String POI_LONGITUDE = PoiSearchHelper.POI_LONGITUDE;
     public static final String POI_LATITUDE = PoiSearchHelper.POI_LATITUDE;
 
-    private OkHttpClient mOkHttpClient;
     private SharedPreferences sharedPreferences;
 
     /*============================== 主界面地图 相关 ==============================*/
@@ -139,10 +120,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     //建议搜索管线：SuggestionSearch 与搜索历史读写收编于 PoiSearchHelper，渲染回调体保留在本类
     private PoiSearchHelper mPoiSearchHelper;
     /*============================== 更新 相关 ==============================*/
-    private DownloadManager mDownloadManager = null;
-    private long mDownloadId;
-    private BroadcastReceiver mDownloadBdRcv;
-    private String mUpdateFilename;
+    //更新检测/下载/安装管线收编于 UpdateManager（对话框组装随流程迁入，见该类）
+    private UpdateManager mUpdateManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -169,7 +148,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         XLog.i("MainActivity: onCreate");
 
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        mOkHttpClient = new OkHttpClient();
 
         initNavigationView();
 
@@ -190,9 +168,11 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
 
         initSearchView();
 
-        initUpdateVersion();
+        //更新管线（检测/下载/安装）收编于 UpdateManager，随 Activity 创建并注册下载完成接收器
+        mUpdateManager = new UpdateManager();
+        mUpdateManager.init(this);
 
-        checkUpdateVersion(false);
+        mUpdateManager.checkUpdate(false);
     }
 
     @Override
@@ -227,7 +207,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         if (mMockController.isRunning()) {
             mMockController.stop(); // 解绑服务并停止前台服务，服务要记得解绑，不要造成内存泄漏
         }
-        unregisterReceiver(mDownloadBdRcv);
+        //下载完成接收器注销收编于 UpdateManager（与 init 注册成对）
+        mUpdateManager.destroy();
 
         mSensorManager.unregisterListener(this);
 
@@ -393,7 +374,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                     }
                 }
             } else if (id == R.id.nav_update) {
-                checkUpdateVersion(true);
+                mUpdateManager.checkUpdate(true);
             } else if (id == R.id.nav_feedback) {
                 File file = new File(getExternalFilesDir("Logs"), GoApplication.LOG_FILE_NAME);
                 ShareUtils.shareFile(this, file, item.getTitle().toString());
@@ -888,137 +869,4 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         mPoiSearchHelper.init();
     }
 
-    /*============================== 更新 相关 ==============================*/
-    private void initUpdateVersion() {
-        mDownloadManager =(DownloadManager) MainActivity.this.getSystemService(DOWNLOAD_SERVICE);
-
-        // 用于监听下载完成后，转到安装界面
-        mDownloadBdRcv = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                installNewVersion();
-            }
-        };
-        // targetSdk 34+ 非保护广播必须声明 exported 状态;DOWNLOAD_COMPLETE 由系统 DownloadManager 发出,NOT_EXPORTED 不影响接收
-        ContextCompat.registerReceiver(this, mDownloadBdRcv, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), ContextCompat.RECEIVER_NOT_EXPORTED);
-    }
-
-    private void checkUpdateVersion(boolean result) {
-        String mapApiUrl = "https://api.github.com/repos/zcshou/gogogo/releases/latest";
-
-        okhttp3.Request request = new okhttp3.Request.Builder().url(mapApiUrl).get().build();
-        final Call call = mOkHttpClient.newCall(request);
-        call.enqueue(new Callback() {
-            @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                XLog.i("更新检测失败");
-            }
-
-            @Override
-            public void onResponse(@NonNull Call call, @NonNull okhttp3.Response response) throws IOException {
-                ResponseBody responseBody = response.body();
-                if (responseBody != null) {
-                    String resp = responseBody.string();
-                    // 注意，该请求在子线程，不能直接操作界面
-                    runOnUiThread(() -> {
-                        try {
-                            JSONObject getRetJson = new JSONObject(resp);
-                            String curVersion = GoUtils.getVersionName(MainActivity.this);
-
-                            if (curVersion != null
-                                    && (!getRetJson.getString("name").contains(curVersion)
-                                    || !getRetJson.getString("tag_name").contains(curVersion))) {
-                                final android.app.AlertDialog alertDialog = new android.app.AlertDialog.Builder(MainActivity.this).create();
-                                alertDialog.show();
-                                alertDialog.setCancelable(false);
-                                Window window = alertDialog.getWindow();
-                                if (window != null) {
-                                    window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);      // 防止出现闪屏
-                                    window.setContentView(R.layout.update);
-                                    window.setGravity(Gravity.CENTER);
-                                    window.setWindowAnimations(R.style.DialogAnimFadeInFadeOut);
-
-                                    TextView updateTitle = window.findViewById(R.id.update_title);
-                                    updateTitle.setText(getRetJson.getString("name"));
-                                    TextView updateTime = window.findViewById(R.id.update_time);
-                                    updateTime.setText(getRetJson.getString("created_at"));
-                                    TextView updateCommit = window.findViewById(R.id.update_commit);
-                                    updateCommit.setText(getRetJson.getString("target_commitish"));
-
-                                    TextView updateContent = window.findViewById(R.id.update_content);
-                                    final Markwon markwon = Markwon.create(MainActivity.this);
-                                    markwon.setMarkdown(updateContent, getRetJson.getString("body"));
-
-                                    Button updateCancel = window.findViewById(R.id.update_ignore);
-                                    updateCancel.setOnClickListener(v -> alertDialog.cancel());
-
-                                    /* 这里用来保存下载地址 */
-                                    JSONArray jsonArray = new JSONArray(getRetJson.getString("assets"));
-                                    JSONObject jsonObject = jsonArray.getJSONObject(0);
-                                    String download_url = jsonObject.getString("browser_download_url");
-                                    mUpdateFilename = jsonObject.getString("name");
-
-                                    Button updateAgree = window.findViewById(R.id.update_agree);
-                                    updateAgree.setOnClickListener(v -> {
-                                        alertDialog.cancel();
-                                        GoUtils.DisplayToast(MainActivity.this, getResources().getString(R.string.update_downloading));
-                                        downloadNewVersion(download_url);
-                                    });
-                                }
-                            } else {
-                                if (result) {
-                                    GoUtils.DisplayToast(MainActivity.this, getResources().getString(R.string.update_last));
-                                }
-                            }
-                        } catch (JSONException e) {
-                            XLog.e("ERROR: resolve json");
-                        }
-                    });
-                }
-            }
-        });
-    }
-
-    private void downloadNewVersion(String url) {
-        if (mDownloadManager == null) {
-            return;
-        }
-
-        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-        request.setAllowedOverRoaming(false);
-        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-        request.setTitle(GoUtils.getAppName(this));
-        request.setDescription("正在下载新版本...");
-        request.setMimeType("application/vnd.android.package-archive");
-
-        // DownloadManager不会覆盖已有的同名文件，需要自己来删除已存在的文件
-        File file = new File(getExternalFilesDir("Updates"), mUpdateFilename);
-        if (file.exists()) {
-            if(!file.delete()) {
-                return;
-            }
-        }
-        request.setDestinationUri(Uri.fromFile(file));
-
-        mDownloadId = mDownloadManager.enqueue(request);
-    }
-
-    private void installNewVersion() {
-        Intent install = new Intent(Intent.ACTION_VIEW);
-        Uri downloadFileUri = mDownloadManager.getUriForDownloadedFile(mDownloadId);
-        File file = new File(getExternalFilesDir("Updates"), mUpdateFilename);
-        if (downloadFileUri != null) {
-            install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-            // 在Broadcast中启动活动需要添加Intent.FLAG_ACTIVITY_NEW_TASK
-            install.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);    //添加这一句表示对目标应用临时授权该Uri所代表的文件
-            install.addCategory("android.intent.category.DEFAULT");
-            install.setDataAndType(ShareUtils.getUriFromFile(MainActivity.this, file), "application/vnd.android.package-archive");
-            startActivity(install);
-        } else {
-            Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName()));
-            intent.addCategory("android.intent.category.DEFAULT");
-            startActivity(intent);
-        }
-    }
 }

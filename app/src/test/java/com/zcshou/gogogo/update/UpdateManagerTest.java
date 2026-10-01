@@ -1,0 +1,104 @@
+package com.zcshou.gogogo.update;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
+
+import org.json.JSONException;
+import org.junit.Test;
+
+/**
+ * UpdateManager.parseRelease 纯 JVM 单测（无 Android 依赖）。
+ * 语义锚定原 MainActivity.checkUpdateVersion 更新对话框组装的 JSON 读取（行为冻结）：
+ * name/created_at/target_commitish/body 直接 getString；assets 经 getString 后二次
+ * new JSONArray 解析再取 assets[0] 的 browser_download_url/name；
+ * 任何缺失键 / assets 缺失或为空均抛 JSONException，由调用方 runOnUiThread 的
+ * catch → XLog.e("ERROR: resolve json") 兜底（保持现状）。
+ *
+ * 测试构件差异说明：GitHub releases/latest 实际返回的 assets 是 JSON 数组，设备端
+ * Android org.json 的 getString 对非字符串值做字符串强转后交给二次解析（原实现依赖
+ * 此行为）；JVM 测试构件 json-java 的 getString 为严格类型（仅接受字符串实例）。
+ * 故测试统一用字符串形态的 assets（JSON 数组文本），与设备端"getString → 二次
+ * JSONArray 解析"走同一路径，实现保持原 getString 写法不因测试构件而改变。
+ */
+public class UpdateManagerTest {
+
+    /* 合法 release 响应（字段形态与 GitHub API 一致，assets 用字符串形态锚定二次解析路径） */
+    private static final String RELEASE_JSON = """
+            {
+                "name": "影梭 v1.2.3",
+                "created_at": "2026-01-02T03:04:05Z",
+                "target_commitish": "master",
+                "body": "## 更新内容\\n- 修复若干问题",
+                "assets": "[{\\"browser_download_url\\":\\"https://github.com/zcshou/gogogo/releases/download/v1.2.3/gogogo.apk\\",\\"name\\":\\"gogogo.apk\\"}]"
+            }
+            """;
+
+    @Test
+    public void parseRelease_validJson_extractsAllFields() throws JSONException {
+        UpdateManager.UpdateInfo info = UpdateManager.parseRelease(RELEASE_JSON);
+
+        assertEquals("影梭 v1.2.3", info.name);
+        assertEquals("2026-01-02T03:04:05Z", info.createdAt);
+        assertEquals("master", info.commitish);
+        assertEquals("## 更新内容\n- 修复若干问题", info.body);
+        assertEquals("https://github.com/zcshou/gogogo/releases/download/v1.2.3/gogogo.apk", info.downloadUrl);
+        assertEquals("gogogo.apk", info.filename);
+    }
+
+    @Test
+    public void parseRelease_missingAssetsKey_throwsJsonException() {
+        // 缺 assets 键 → getString("assets") 抛 JSONException（对话框中止组装，由调用方 catch 兜底）
+        String json = """
+                {
+                    "name": "影梭 v1.2.3",
+                    "created_at": "2026-01-02T03:04:05Z",
+                    "target_commitish": "master",
+                    "body": "## 更新内容"
+                }
+                """;
+        assertThrows(JSONException.class, () -> UpdateManager.parseRelease(json));
+    }
+
+    @Test
+    public void parseRelease_emptyAssetsArray_throwsJsonException() {
+        // assets 为空数组（无 APK 资产）→ getJSONObject(0) 抛 JSONException
+        String json = """
+                {
+                    "name": "影梭 v1.2.3",
+                    "created_at": "2026-01-02T03:04:05Z",
+                    "target_commitish": "master",
+                    "body": "## 更新内容",
+                    "assets": "[]"
+                }
+                """;
+        assertThrows(JSONException.class, () -> UpdateManager.parseRelease(json));
+    }
+
+    @Test
+    public void parseRelease_missingBodyKey_throwsJsonException() {
+        // 缺 body 键 → getString("body") 抛 JSONException
+        String json = """
+                {
+                    "name": "影梭 v1.2.3",
+                    "created_at": "2026-01-02T03:04:05Z",
+                    "target_commitish": "master",
+                    "assets": "[{\\"browser_download_url\\":\\"https://example.com/gogogo.apk\\",\\"name\\":\\"gogogo.apk\\"}]"
+                }
+                """;
+        assertThrows(JSONException.class, () -> UpdateManager.parseRelease(json));
+    }
+
+    @Test
+    public void parseRelease_missingNameKey_throwsJsonException() {
+        // 缺 name 键 → getString("name") 抛 JSONException（该值同时参与版本号判断与对话框标题）
+        String json = """
+                {
+                    "created_at": "2026-01-02T03:04:05Z",
+                    "target_commitish": "master",
+                    "body": "## 更新内容",
+                    "assets": "[{\\"browser_download_url\\":\\"https://example.com/gogogo.apk\\",\\"name\\":\\"gogogo.apk\\"}]"
+                }
+                """;
+        assertThrows(JSONException.class, () -> UpdateManager.parseRelease(json));
+    }
+}
