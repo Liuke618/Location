@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
@@ -36,6 +37,7 @@ public class WelcomeActivity extends AppCompatActivity {
 
     private static boolean isPermission = false;
     private static final int SDK_PERMISSION_REQUEST = 127;
+    private static final int SDK_NOTIFICATION_REQUEST = 128;
     private static final ArrayList<String> ReqPermissions = new ArrayList<>();
 
     private CheckBox checkBox;
@@ -87,6 +89,7 @@ public class WelcomeActivity extends AppCompatActivity {
                 }
             }
             isPermission = true;
+            checkNotificationPermission();
         }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
@@ -116,8 +119,17 @@ public class WelcomeActivity extends AppCompatActivity {
 
         if (ReqPermissions.isEmpty()) {
             isPermission = true;
+            checkNotificationPermission();
         } else {
             requestPermissions(ReqPermissions.toArray(new String[0]), SDK_PERMISSION_REQUEST);
+        }
+    }
+
+    // 通知权限仅影响前台通知显示,拒绝后不影响 app 功能,故不参与 isPermission 门控
+    private void checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, SDK_NOTIFICATION_REQUEST);
         }
     }
 
