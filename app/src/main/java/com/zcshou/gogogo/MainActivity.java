@@ -60,9 +60,6 @@ import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.search.core.SearchResult;
 import com.baidu.mapapi.search.geocode.GeoCodeResult;
 import com.baidu.mapapi.search.geocode.ReverseGeoCodeResult;
-import com.baidu.mapapi.search.sug.SuggestionResult;
-import com.baidu.mapapi.search.sug.SuggestionSearch;
-import com.baidu.mapapi.search.sug.SuggestionSearchOption;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
@@ -73,8 +70,6 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -82,11 +77,11 @@ import com.zcshou.service.MockLocationController;
 import com.zcshou.service.ServiceGoController;
 import com.zcshou.data.HistoryRepository;
 import com.zcshou.data.HistoryRepository.LocationRow;
-import com.zcshou.data.HistoryRepository.SearchRow;
 import com.zcshou.gogogo.location.CurrentLocationSource;
 import com.zcshou.gogogo.map.GeocoderHelper;
 import com.zcshou.gogogo.map.MapController;
 import com.zcshou.gogogo.map.MapState;
+import com.zcshou.gogogo.search.PoiSearchHelper;
 import com.zcshou.utils.ShareUtils;
 import com.zcshou.utils.GoUtils;
 import com.zcshou.utils.MapUtils;
@@ -101,11 +96,11 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 public class MainActivity extends BaseActivity implements SensorEventListener, MapController.MapEventListener, CurrentLocationSource.LocationListener {
-    /* 对外 */
-    public static final String POI_NAME = "POI_NAME";
-    public static final String POI_ADDRESS = "POI_ADDRESS";
-    public static final String POI_LONGITUDE = "POI_LONGITUDE";
-    public static final String POI_LATITUDE = "POI_LATITUDE";
+    /* 对外（POI_* 键名为搜索结果 SimpleAdapter 列契约，随 getMapList 收编于 PoiSearchHelper，JoyStick 引用不受影响） */
+    public static final String POI_NAME = PoiSearchHelper.POI_NAME;
+    public static final String POI_ADDRESS = PoiSearchHelper.POI_ADDRESS;
+    public static final String POI_LONGITUDE = PoiSearchHelper.POI_LONGITUDE;
+    public static final String POI_LATITUDE = PoiSearchHelper.POI_LATITUDE;
 
     private OkHttpClient mOkHttpClient;
     private SharedPreferences sharedPreferences;
@@ -141,7 +136,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     private ListView mSearchHistoryList;
     private LinearLayout mHistoryLayout;
     private MenuItem searchItem;
-    private SuggestionSearch mSuggestionSearch;
+    //建议搜索管线：SuggestionSearch 与搜索历史读写收编于 PoiSearchHelper，渲染回调体保留在本类
+    private PoiSearchHelper mPoiSearchHelper;
     /*============================== 更新 相关 ==============================*/
     private DownloadManager mDownloadManager = null;
     private long mDownloadId;
@@ -244,8 +240,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         mMapController.getBaiduMap().setMyLocationEnabled(false);
         mMapController.getMapView().onDestroy();
 
-        //poi search destroy
-        mSuggestionSearch.destroy();
+        //poi search destroy：SuggestionSearch 销毁收编于 PoiSearchHelper
+        mPoiSearchHelper.destroy();
 
         super.onDestroy();
     }
@@ -266,8 +262,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
             @Override
             public boolean onMenuItemActionExpand(MenuItem item) {
                 mSearchLayout.setVisibility(View.INVISIBLE);
-                //展示搜索历史
-                List<Map<String, Object>> data = mHistoryRepository.getSearchRows();
+                //展示搜索历史（历史行读取收编于 PoiSearchHelper，SimpleAdapter 渲染属 UI 保留在此）
+                List<Map<String, Object>> data = mPoiSearchHelper.loadSearchHistoryRows();
 
                 if (!data.isEmpty()) {
                     SimpleAdapter simAdapt = new SimpleAdapter(
@@ -303,15 +299,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
             @Override
             public boolean onQueryTextSubmit(String query) {
                 try {
-                    mSuggestionSearch.requestSuggestion((new SuggestionSearchOption())
-                            .keyword(query)
-                            .city(mMapState.getCurrentCity())
-                    );
-                    //搜索历史 插表参数（纯关键字搜索，经纬度字段为空，与原插表缺省列语义一致）
-                    SearchRow searchRow = new SearchRow(query, "搜索关键字", HistoryRepository.DB_SEARCH_TYPE_KEY,
-                            null, null, null, null, System.currentTimeMillis() / 1000);
-
-                    mHistoryRepository.addSearchRow(searchRow);
+                    //查询下发与关键字保存收编于 PoiSearchHelper（try/catch 与 UI 处理保留在此，异常语义不变）
+                    mPoiSearchHelper.requestSuggestions(query, mMapState.getCurrentCity());
+                    mPoiSearchHelper.saveQueryHistory(query);
                     mMapController.getBaiduMap().clear();
                     mSearchLayout.setVisibility(View.INVISIBLE);
                 } catch (Exception e) {
@@ -330,10 +320,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
 
                 if (newText != null && !newText.isEmpty()) {
                     try {
-                        mSuggestionSearch.requestSuggestion((new SuggestionSearchOption())
-                                .keyword(newText)
-                                .city(mMapState.getCurrentCity())
-                        );
+                        //查询下发收编于 PoiSearchHelper
+                        mPoiSearchHelper.requestSuggestions(newText, mMapState.getCurrentCity());
                     } catch (Exception e) {
                         GoUtils.DisplayToast(MainActivity.this, getResources().getString(R.string.app_error_search));
                         XLog.d(getResources().getString(R.string.app_error_search));
@@ -793,17 +781,11 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
 
             mMapController.markMap();
 
-            double[] latLng = MapUtils.bd2wgs(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
-
             // mSearchList.setVisibility(View.GONE);
-            //搜索历史 插表参数
-            SearchRow searchRow = new SearchRow(mMapState.getMarkName(),
+            //搜索历史 插表参数：POI 点选保存收编于 PoiSearchHelper（bd2wgs 换算 + SearchRow 构造 + 落库）
+            mPoiSearchHelper.savePoiSelection(mMapState.getMarkName(),
                     ((TextView) view.findViewById(R.id.poi_address)).getText().toString(),
-                    HistoryRepository.DB_SEARCH_TYPE_RESULT,
-                    String.valueOf(latLng[0]), String.valueOf(latLng[1]), lng, lat,
-                    System.currentTimeMillis() / 1000);
-
-            mHistoryRepository.addSearchRow(searchRow);
+                    mMapState.getSelectedPoint(), lng, lat);
             mSearchLayout.setVisibility(View.INVISIBLE);
             searchItem.collapseActionView();
         });
@@ -825,18 +807,12 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
 
                 mMapController.markMap();
 
-                double[] latLng = MapUtils.bd2wgs(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
-
                 //设置列表不可见
                 mHistoryLayout.setVisibility(View.INVISIBLE);
                 searchItem.collapseActionView();
-                //更新表
-                SearchRow searchRow = new SearchRow(searchKey, searchDescription,
-                        HistoryRepository.DB_SEARCH_TYPE_RESULT,
-                        String.valueOf(latLng[0]), String.valueOf(latLng[1]), lng, lat,
-                        System.currentTimeMillis() / 1000);
-
-                mHistoryRepository.addSearchRow(searchRow);
+                //更新表：搜索历史定位点选保存收编于 PoiSearchHelper（bd2wgs 换算 + SearchRow 构造 + 落库）
+                mPoiSearchHelper.savePoiSelection(searchKey, searchDescription,
+                        mMapState.getSelectedPoint(), lng, lat);
             } else if (searchIsLoc.equals("0")) { //如果仅仅是搜索
                 try {
                     searchView.setQuery(searchKey, true);
@@ -856,10 +832,11 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                         String searchKey = ((TextView) view.findViewById(R.id.search_key)).getText().toString();
 
                         try {
-                            mHistoryRepository.deleteSearchRow(searchKey);
+                            //删除与历史行重取收编于 PoiSearchHelper，SimpleAdapter 渲染属 UI 保留在此
+                            mPoiSearchHelper.deleteSearchHistory(searchKey);
                             //删除成功
                             //展示搜索历史
-                            List<Map<String, Object>> data = mHistoryRepository.getSearchRows();
+                            List<Map<String, Object>> data = mPoiSearchHelper.loadSearchHistoryRows();
 
                             if (!data.isEmpty()) {
                                 SimpleAdapter simAdapt = new SimpleAdapter(
@@ -887,14 +864,16 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                     .show();
             return true;
         });
-        //设置搜索建议返回值监听
-        mSuggestionSearch = SuggestionSearch.newInstance();
-        mSuggestionSearch.setOnGetSuggestionResultListener(suggestionResult -> {
-            if (suggestionResult == null || suggestionResult.getAllSuggestions() == null) {
-                GoUtils.DisplayToast(this,getResources().getString(R.string.app_search_null));
-            } else {
-                List<Map<String, Object>> data = getMapList(suggestionResult);
+        //设置搜索建议返回值监听：SuggestionSearch 构造与监听注册收编于 PoiSearchHelper（建议搜索管线），
+        //无结果提示与列表渲染回调体保留在本类（原样）
+        mPoiSearchHelper = new PoiSearchHelper(mHistoryRepository, new PoiSearchHelper.SuggestionListener() {
+            @Override
+            public void onSuggestionUnavailable() {
+                GoUtils.DisplayToast(MainActivity.this, getResources().getString(R.string.app_search_null));
+            }
 
+            @Override
+            public void onSuggestionResult(List<Map<String, Object>> data) {
                 SimpleAdapter simAdapt = new SimpleAdapter(
                         MainActivity.this,
                         data,
@@ -906,26 +885,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 mSearchLayout.setVisibility(View.VISIBLE);
             }
         });
-    }
-
-    @NonNull
-    private static List<Map<String, Object>> getMapList(SuggestionResult suggestionResult) {
-        List<Map<String, Object>> data = new ArrayList<>();
-        int retCnt = suggestionResult.getAllSuggestions().size();
-
-        for (int i = 0; i < retCnt; i++) {
-            if (suggestionResult.getAllSuggestions().get(i).pt == null) {
-                continue;
-            }
-
-            Map<String, Object> poiItem = new HashMap<>();
-            poiItem.put(POI_NAME, suggestionResult.getAllSuggestions().get(i).key);
-            poiItem.put(POI_ADDRESS, suggestionResult.getAllSuggestions().get(i).city + " " + suggestionResult.getAllSuggestions().get(i).district);
-            poiItem.put(POI_LONGITUDE, "" + suggestionResult.getAllSuggestions().get(i).pt.longitude);
-            poiItem.put(POI_LATITUDE, "" + suggestionResult.getAllSuggestions().get(i).pt.latitude);
-            data.add(poiItem);
-        }
-        return data;
+        mPoiSearchHelper.init();
     }
 
     /*============================== 更新 相关 ==============================*/
