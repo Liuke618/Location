@@ -81,7 +81,7 @@ AMapLocationClient.updatePrivacyAgree(this, true);
 | `MapController` | `BaiduMap`/`MarkerOptions`/`MapStatusUpdateFactory`/`MyLocationData` | `AMap`/`Marker`/`CameraUpdateFactory`/`MyLocationStyle`;点击/长按/POI 点击三回调经 `MapEventListener` 不变;**`onMapDoubleClick` 删除**(高德内置双击缩放手势),接口缩为 3 回调;长按地址气泡改 `InfoWindowAdapter`(复用 `location_poi_info` 布局)+ `marker.showInfoWindow()`;蓝点:`setMyLocationEnabled(true)` + `MyLocationStyle.myLocationType(LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)`(显示蓝点带方向、视野不跟随,与现状一致)+ `setLocationSource(...)` 桥接 |
 | `CurrentLocationSource` | 百度 `LocationClient`/`BDAbstractLocationListener`/`LocationClientOption`(`setCoorType("bd09ll")`) | `AMapLocationClient`/`AMapLocationListener`/`AMapLocationClientOption`(高德定位原生返回 GCJ02);类实现 AMap `LocationSource`,把 `AMapLocation` 转 `android.location.Location`(带传感器方向 bearing)喂给 `OnLocationChangedListener`;诊断回调简化为 `getErrorCode()/getErrorInfo()`;`LocationListener` 接口的 `BDLocation` 参数换 `AMapLocation` |
 | `PoiSearchHelper` | `SuggestionSearch`/`SuggestionResult` | `Inputtips`/`InputtipsQuery(keyword, city)`;`Tip.getName()/getAddress()/getPoint()`(point 可空,空则跳过该行);行键契约(`POI_*`)不变 |
-| `GeocoderHelper` | SDK `GeoCoder` + OkHttp REST(api.map.baidu.com reverse_geocoding v3,ak+mcode) | 单通道 `GeocodeSearch`:`initSdk(listener)` → 构造 `GeocodeSearch` + `OnGeocodeSearchListener`;`reverseBySdk` → `getFromLocationAsyn(new ReGeocodeQuery(LatLonPoint, 200, GeocodeSearch.AMAP))`;`resolveAddress(lng, lat, ak, safeCode, cb)` → `resolveAddress(lng, lat, cb)`(SDK 内部网络,回调线程模型不变——不切 UI 线程);`parseAddress` 纯函数重写为高德 `RegeocodeResult` 响应解析(保持"成功取 formatted_address、失败回退 markName"三分支语义)并以新 JVM 测试锚定 |
+| `GeocoderHelper` | SDK `GeoCoder` + OkHttp REST(api.map.baidu.com reverse_geocoding v3,ak+mcode) | 单通道 `GeocodeSearch`:`initSdk(listener)` → 构造 `GeocodeSearch` + `OnGeocodeSearchListener`;`reverseBySdk` → `getFromLocationAsyn(new ReGeocodeQuery(LatLonPoint, 200, GeocodeSearch.AMAP))`;`resolveAddress(lng, lat, cb)`(SDK 内部网络,单 Android key);**回调线程为 SDK 主线程回调,单行落库在回调内完成——原 OkHttp 后台线程模型不保留**(轻量单行插入,可接受);地址提取三分支收敛为纯函数 `extractAddress(rCode, formatAddress, markName, defaultName)`(纯字符串入参,规避 SDK POJO 的 JVM 可测性问题),JVM 测试重锚定 |
 | `MapUtils` | `bd2wgs`/`wgs2bd09`/`bd09togcj02` | 新增 `wgs2gcj`(自现 `wgs2bd09` 拆出第一段,`wgs2bd09` 随之删除);`gcj02towgs84` 保留;`bd2wgs` 删除;**`bd09togcj02` 保留**(§9 数据迁移的升级路径永久依赖它,不随业务层退役) |
 | 手动输入对话框 | "BD09 坐标系 / GPS 坐标系"单选(`input_position_baidu`) | "高德(GCJ02)/ GPS(WGS84)"(键改 `input_position_gcj`);GPS 分支换 `wgs2gcj` |
 | `FragmentSettings` | 死 import `SDKInitializer` | 删除 |
@@ -101,16 +101,17 @@ GO 流程:  gcj2wgs(selectedPoint)          → TestProvider(WGS84)
 
 ## 9. 数据迁移(一次付清)
 
-1. **SQLite**:两个库 `DataBaseHistoryLocation` 与 `DataBaseHistorySearch`(搜索历史保存 POI 点选时同样存坐标)**版本均 1→2**;`onUpgrade` 中逐行读取 CUSTOM 列(即 BD09)→ `MapUtils.bd09togcj02` → 回写(Java 层计算,非 SQL);WGS84 列不动;两库迁移逻辑收敛为一个共享工具方法,避免双写。
+1. **SQLite**:两个库 `DataBaseHistoryLocation` 与 `DataBaseHistorySearch`(搜索历史保存 POI 点选时同样存坐标)**版本均 1→2**;`onUpgrade` 中逐行读取 CUSTOM 列(即 BD09)→ 转换 → 回写(Java 层计算,非 SQL);WGS84 列不动;两库迁移共用 **`data/DbMigrations`** 工具类。注意:现 `onUpgrade` 是"DROP 重建"(丢数据),必须重写为真迁移,不得沿用。
 2. **上次位置记忆**:`setting_last_lat`/`setting_last_lng` 存的是 BD09;以一次性标记偏好 `setting_coord_migrated`(bool,默认 false)守卫:首次启动执行 BD09→GCJ02 转换并置位。与 DB 迁移同 commit。
 3. 迁移代码不设降级路径;转换函数为精确公式,失败仅可能因存量数据非法(逐行 try-catch,坏行保留原值并 XLog 记录)。
 
 ## 10. 测试策略
 
 - **新增 JVM 测试**(`app/src/test` 镜像包,禁 Robolectric):
-  - `MapUtilsTest`:`gcj02towgs84`/`wgs2gcj` 往返锚定(北京天安门、济南泉城广场已知锚点,容差 1e-6 度量级);`bd09togcj02` 迁移用锚定(迁移代码复用它,测试保护迁移正确性)。
-  - `GeocoderHelperTest` 重写:`parseAddress` 高德响应三分支(成功/业务失败/JSON 非法),字符串形值锚定(org.json stub 坑)。
-- 既有 `HistoryRepositoryContractTest` 补迁移用例:建旧版本库(BD09 值)→ 升级 → 断言 GCJ02 值。
+  - `MapUtilsTest`:`gcj02towgs84`/`wgs2gcj` 往返锚定(北京天安门、济南泉城广场已知锚点,容差 1e-5 度量级);`bd09togcj02` 锚定(迁移代码永久复用它,测试保护迁移正确性)。
+  - `DbMigrationsTest`:`bd09ToGcj02` 纯函数(合法锚定值 + 非法串返回 null)。
+  - `GeocoderHelperTest` 重写:`extractAddress` 三分支(成功/业务失败/输入非法),纯字符串入参(规避 org.json stub 与 SDK POJO 的 JVM 风险)。
+  - **不可行项说明**:原计划的"契约测试补 DB 迁移用例"不可行——`SQLiteOpenHelper` 无法在 JVM 实例化且禁 Robolectric;迁移正确性由 `bd09togcj02` 锚定测试 + `DbMigrations` 纯函数测试共同覆盖,DB 循环本身保持薄。
 - MainViewModel/UpdateManager 既有测试不动。
 
 ## 11. 提交划分(编译闭包约束下的最小分步)
