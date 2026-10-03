@@ -26,7 +26,7 @@ import java.util.Map;
  */
 public class PoiSearchHelper {
 
-    /* 搜索结果 Map 行键名（SimpleAdapter 列契约；MainActivity.POI_* 委托至本类，JoyStick 引用不受影响） */
+    /* 搜索结果 Map 行键名（SimpleAdapter 列契约；MainActivity.POI_* 委托至本类） */
     public static final String POI_NAME = "POI_NAME";
     public static final String POI_ADDRESS = "POI_ADDRESS";
     public static final String POI_LONGITUDE = "POI_LONGITUDE";

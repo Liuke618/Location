@@ -85,7 +85,7 @@ import com.zcshou.utils.MapUtils;
 import com.elvishew.xlog.XLog;
 
 public class MainActivity extends BaseActivity implements SensorEventListener, MapController.MapEventListener, CurrentLocationSource.LocationListener {
-    /* 对外（POI_* 键名为搜索结果 SimpleAdapter 列契约，随 getMapList 收编于 PoiSearchHelper，JoyStick 引用不受影响） */
+    /* 对外（POI_* 键名为搜索结果 SimpleAdapter 列契约，随 getMapList 收编于 PoiSearchHelper） */
     public static final String POI_NAME = PoiSearchHelper.POI_NAME;
     public static final String POI_ADDRESS = PoiSearchHelper.POI_ADDRESS;
     public static final String POI_LONGITUDE = PoiSearchHelper.POI_LONGITUDE;
