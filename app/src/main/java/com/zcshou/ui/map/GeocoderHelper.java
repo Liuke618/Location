@@ -50,6 +50,16 @@ public class GeocoderHelper {
             mGeocodeSearch.setOnGeocodeSearchListener(new GeocodeSearch.OnGeocodeSearchListener() {
                 @Override
                 public void onRegeocodeSearched(RegeocodeResult regeocodeResult, int rCode) {
+                    //落库通道:resolveAddress 的单飞行回调(rCode==1000 且解析成功时 formatAddress 非空,否则 null)
+                    String formatAddress = null;
+                    if (rCode == 1000 && regeocodeResult != null && regeocodeResult.getRegeocodeAddress() != null) {
+                        formatAddress = regeocodeResult.getRegeocodeAddress().getFormatAddress();
+                    }
+                    if (mPendingCallback != null) {
+                        mPendingCallback.onAddressResolved(rCode, formatAddress);
+                        mPendingCallback = null;
+                    }
+                    //长按信息窗通道:与落库通道互不排斥,并存派发
                     listener.onGetReverseGeoCodeResult(regeocodeResult);
                 }
 

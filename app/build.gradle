@@ -100,6 +100,14 @@ android {
         includeInApk = false
         includeInBundle = false
     }
+
+    // lint 基线仅登记 2 条历史 IconLocation 告警（icon_gcoding.webp/welcome.webp 位于无密度目录）：
+    // 二者均为第三方位图文件，无法写入 @SuppressLint 或 tools:ignore；其“改目录”建议会改变位图
+    // 解码密度、造成渲染行为变化，故按“逐条登记”方式保留；原 BaiduLBS_Android.jar 的
+    // TrustAllX509TrustManager 豁免已随百度 jar 迁移删除，不再登记。
+    lint {
+        baseline = file('lint-baseline.xml')
+    }
 }
 
 def apkBaseName = "Go_${android.defaultConfig.versionName}_arm64-v8a"

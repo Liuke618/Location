@@ -41,7 +41,6 @@ import androidx.preference.PreferenceManager;
 
 import com.amap.api.location.AMapLocation;
 import com.amap.api.maps.AMap;
-import com.amap.api.maps.CameraUpdate;
 import com.amap.api.maps.CameraUpdateFactory;
 import com.amap.api.maps.MapView;
 import com.amap.api.maps.model.LatLng;
