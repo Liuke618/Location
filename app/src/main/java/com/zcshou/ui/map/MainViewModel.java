@@ -6,7 +6,7 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.baidu.mapapi.model.LatLng;
+import com.amap.api.maps.model.LatLng;
 import com.zcshou.ui.map.MapState;
 
 import java.util.List;

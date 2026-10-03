@@ -1,8 +1,8 @@
 package com.zcshou.ui.map;
 
-import com.baidu.mapapi.map.BitmapDescriptor;
-import com.baidu.mapapi.map.BitmapDescriptorFactory;
-import com.baidu.mapapi.model.LatLng;
+import com.amap.api.maps.model.BitmapDescriptor;
+import com.amap.api.maps.model.BitmapDescriptorFactory;
+import com.amap.api.maps.model.LatLng;
 
 import com.zcshou.gogogo.R;
 
@@ -11,8 +11,8 @@ import com.zcshou.gogogo.R;
  * 经 AppContainer 以单例形式跨页面共享。语义与原静态字段保持一致（选中点可为 null）。
  */
 public class MapState {
-    /* 当前标记的地图点（初始值与原静态字段一致） */
-    private LatLng mSelectedPoint = new LatLng(36.547743718042415, 117.07018449827267);
+    /* 当前标记的地图点(初始占位点,已由原 BD09 值换算为 GCJ02) */
+    private LatLng mSelectedPoint = new LatLng(36.54208893720672, 117.06357864688202);
     private String mMarkName = null;
     private String mCurrentCity = null;
     private BitmapDescriptor mMarkerIcon = null;

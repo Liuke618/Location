@@ -38,12 +38,12 @@
         android:orientation="horizontal">
 
         <RadioButton
-            android:id="@+id/pos_type_bd"
+            android:id="@+id/pos_type_gcj"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:checked="true"
-            android:text="@string/input_position_baidu" />
+            android:text="@string/input_position_gcj" />
 
         <RadioButton
             android:layout_width="match_parent"

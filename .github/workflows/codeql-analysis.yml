@@ -61,8 +61,7 @@ jobs:
       - name: Create local.properties
         run: |
           cat << EOF > local.properties
-          MAPS_API_KEY=${{ secrets.MAPS_API_KEY }}
-          MAPS_SAFE_CODE=${{ secrets.MAPS_SAFE_CODE }}
+          AMAP_API_KEY=${{ secrets.AMAP_API_KEY }}
           EOF
       - name: Assemble
         run: |

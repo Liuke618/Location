@@ -2,16 +2,15 @@ plugins {
     id "com.android.application"
 }
 
-// 从 local.properties 读取百度地图密钥并注入 BuildConfig(替代 secrets-gradle-plugin,键名与 CI 注入方式保持不变)
+// 从 local.properties 读取高德地图密钥并注入 manifestPlaceholder(键名与 CI 注入方式保持不变)
 def localProps = new Properties()
 def localPropsFile = rootProject.file('local.properties')
 if (localPropsFile.exists()) {
     localPropsFile.withInputStream { localProps.load(it) }
 }
-def mapsApiKey = localProps.getProperty('MAPS_API_KEY', '')
-def mapsSafeCode = localProps.getProperty('MAPS_SAFE_CODE', '')
-if (mapsApiKey.isEmpty()) {
-    logger.warn('MAPS_API_KEY 未在 local.properties 中配置,百度地图运行时将无法初始化')
+def amapApiKey = localProps.getProperty('AMAP_API_KEY', '')
+if (amapApiKey.isEmpty()) {
+    logger.warn('AMAP_API_KEY 未在 local.properties 中配置,高德地图运行时将无法初始化')
 }
 
 android {
@@ -44,8 +43,7 @@ android {
         versionCode 1123
         versionName '1.12.3' // https://semver.org/lang/zh-CN/
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField 'String', 'MAPS_API_KEY', "\"${mapsApiKey}\""
-        buildConfigField 'String', 'MAPS_SAFE_CODE', "\"${mapsSafeCode}\""
+        manifestPlaceholders = [AMAP_API_KEY: amapApiKey]
         ndk {
             //noinspection ChromeOsAbiSupport
             abiFilters "arm64-v8a"
@@ -98,23 +96,9 @@ android {
         }
     }
 
-    sourceSets {
-        main {
-            jniLibs.srcDirs = ['libs']
-        }
-    }
-
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false
-    }
-
-    // lint 基线仅登记 3 条无法就地注解的二进制文件告警（BaiduLBS_Android.jar 的 TrustAllX509TrustManager、
-    // icon_gcoding.webp/welcome.webp 的 IconLocation）：二者均为第三方二进制/位图文件，无法写入 @SuppressLint 或
-    // tools:ignore；IconLocation 的“改目录”建议会改变位图解码密度、造成渲染行为变化，故按“逐条登记”方式保留。
-    // 基线按 issue+位置逐条匹配，非整类禁用；除注释所列 3 条外不得新增条目。
-    lint {
-        baseline = file('lint-baseline.xml')
     }
 }
 
@@ -130,7 +114,6 @@ androidComponents {
 }
 
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
     // AppCompat 1.8.0 依赖 Lifecycle/SavedState 传递库，这里显式声明 lifecycle-viewmodel 2.11.0 以固定版本
     implementation 'androidx.lifecycle:lifecycle-viewmodel:2.11.0'
     implementation 'androidx.appcompat:appcompat:1.8.0'
@@ -140,9 +123,13 @@ dependencies {
     // NewerVersionAvailable：okhttp 5.x 为 Kotlin 重写的大版本升级，存在行为差异，暂维持 4.x 稳定线
     //noinspection NewerVersionAvailable
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    // 高德 LBS 官方组合包(3dmap 11.3.100 + location 11.3.000 + search 9.8.1 一体),替代百度本地 jar。
+    // 不用拆分三件套(3dmap:10.0.600/search:9.7.1/location:11.3.000):实测三者两两重复类冲突
+    // (com.amap.apis.utils.core.api.* 三包皆有,且 3dmap 内嵌整个定位 SDK),无法共存编译;
+    // 组合包为高德官方去重打包,location 与计划钉死版本一致(迁移 Task 1 报告有验证明细)
+    implementation 'com.amap.api:3dmap-location-search:11.3.100_loc11.3.000_sea9.8.1'
     implementation 'com.elvishew:xlog:1.11.1'
     implementation 'io.noties.markwon:core:4.6.2'
-    implementation files('libs/BaiduLBS_Android.jar')
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'androidx.arch.core:core-testing:2.2.0'
     // 本地 JVM 单测默认使用 android.jar 的 org.json 桩（全部方法抛 not mocked），

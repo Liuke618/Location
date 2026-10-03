@@ -51,19 +51,15 @@
             android:name="org.apache.http.legacy"
             android:required="false" />
 
-        <!-- 百度地图 间隔定位必须配置此service否则功能无效 -->
-        <!-- targetSdk 34+ 前台服务需声明类型；SDK内部若调用startForeground缺少类型会崩溃，未使用时声明无副作用 -->
-        <service
-            android:name="com.baidu.location.f"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="location"
-            android:process=":remote" />
-
         <service
             android:exported="false"
             android:foregroundServiceType="location"
             android:name="com.zcshou.service.ServiceGo" />
+
+        <!-- 高德开放平台 key(经 manifestPlaceholder 注入,绑定包名 com.zcshou.gogogo + 签名 SHA1) -->
+        <meta-data
+            android:name="com.amap.api.v2.apikey"
+            android:value="${AMAP_API_KEY}" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -8,7 +8,7 @@ import static org.junit.Assert.assertTrue;
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 import androidx.lifecycle.Observer;
 
-import com.baidu.mapapi.model.LatLng;
+import com.amap.api.maps.model.LatLng;
 import com.zcshou.ui.map.MapState;
 
 import org.junit.Before;

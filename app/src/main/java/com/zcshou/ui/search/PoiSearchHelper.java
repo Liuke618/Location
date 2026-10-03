@@ -1,11 +1,14 @@
 package com.zcshou.ui.search;
 
+import android.content.Context;
+
 import androidx.annotation.NonNull;
 
-import com.baidu.mapapi.model.LatLng;
-import com.baidu.mapapi.search.sug.SuggestionResult;
-import com.baidu.mapapi.search.sug.SuggestionSearch;
-import com.baidu.mapapi.search.sug.SuggestionSearchOption;
+import com.amap.api.maps.model.LatLng;
+import com.amap.api.services.core.LatLonPoint;
+import com.amap.api.services.help.Inputtips;
+import com.amap.api.services.help.InputtipsQuery;
+import com.amap.api.services.help.Tip;
 
 import com.zcshou.data.HistoryRepository;
 import com.zcshou.data.HistoryRepository.SearchRow;
@@ -18,7 +21,7 @@ import java.util.Map;
 
 /**
  * POI 搜索助手：收编原 MainActivity 的 suggestion 搜索管线（数据侧）。
- * SuggestionSearch 构造与结果监听注册、SuggestionResult→List&lt;Map&gt; 转换（原 getMapList 原样）、
+ * Inputtips 构造与结果监听注册、Tip→List&lt;Map&gt; 转换（getTipList）、
  * 查询下发（原 onQueryTextSubmit/Change 中的 requestSuggestion 触发点）、
  * 搜索历史读写（关键字保存、POI 点选保存、历史行读取、删除）收编于此；
  * SearchView 菜单交互与 ListView/SimpleAdapter 渲染属 UI，保留在 MainActivity，
@@ -48,40 +51,32 @@ public class PoiSearchHelper {
         void onSuggestionResult(List<Map<String, Object>> data);
     }
 
+    private final Context mContext;
     private final HistoryRepository mHistoryRepository;
     private final SuggestionListener mListener;
-    private SuggestionSearch mSuggestionSearch;
 
-    public PoiSearchHelper(@NonNull HistoryRepository historyRepository, @NonNull SuggestionListener listener) {
+    public PoiSearchHelper(@NonNull Context context, @NonNull HistoryRepository historyRepository, @NonNull SuggestionListener listener) {
+        mContext = context;
         mHistoryRepository = historyRepository;
         mListener = listener;
     }
 
     /**
-     * SuggestionSearch 构造与建议结果监听注册（原 initSearchView 末段"设置搜索建议返回值监听"原样）
-     */
-    public void init() {
-        //设置搜索建议返回值监听
-        mSuggestionSearch = SuggestionSearch.newInstance();
-        mSuggestionSearch.setOnGetSuggestionResultListener(suggestionResult -> {
-            if (suggestionResult == null || suggestionResult.getAllSuggestions() == null) {
-                mListener.onSuggestionUnavailable();
-            } else {
-                mListener.onSuggestionResult(getMapList(suggestionResult));
-            }
-        });
-    }
-
-    /**
-     * 下发 suggestion 查询（原 onQueryTextSubmit / onQueryTextChange 中的 requestSuggestion 触发点；
-     * 城市取自 MapState.getCurrentCity()，由调用方传入以保持本类与地图状态解耦；
-     * try/catch 与 UI 处理保留在 MainActivity，异常语义不变）
+     * 下发建议查询(原 onQueryTextSubmit / onQueryTextChange 中的 requestSuggestion 触发点;
+     * 城市取自 MapState.getCurrentCity(),由调用方传入;try/catch 与 UI 处理保留在 MainActivity)
      */
     public void requestSuggestions(String query, String city) {
-        mSuggestionSearch.requestSuggestion((new SuggestionSearchOption())
-                .keyword(query)
-                .city(city)
-        );
+        InputtipsQuery inputtipsQuery = new InputtipsQuery(query, city == null ? "" : city);
+        Inputtips inputtips = new Inputtips(mContext, inputtipsQuery);
+        inputtips.setInputtipsListener((tips, rCode) -> {
+            //rCode==1000 为高德统一成功码
+            if (rCode != 1000 || tips == null || tips.isEmpty()) {
+                mListener.onSuggestionUnavailable();
+            } else {
+                mListener.onSuggestionResult(getTipList(tips));
+            }
+        });
+        inputtips.requestInputtipsAsyn();
     }
 
     /**
@@ -97,11 +92,11 @@ public class PoiSearchHelper {
     }
 
     /**
-     * POI 点选保存路径（原 initSearchView 中 suggestion 列表点击与搜索历史定位点击两处的插表段，
-     * 逐字段一致：WGS84 经纬度来自 bd2wgs 换算，lngCustom/latCustom 为 bd09 原坐标）
+     * POI 点选保存路径(原 initSearchView 中两处插表段对应物,
+     * 逐字段一致:WGS84 经纬度来自 gcj02towgs84 换算,lngCustom/latCustom 为 GCJ02 原坐标)
      */
-    public void savePoiSelection(String name, String address, LatLng bd09Point, String lngCustom, String latCustom) {
-        double[] latLng = MapUtils.bd2wgs(bd09Point.longitude, bd09Point.latitude);
+    public void savePoiSelection(String name, String address, LatLng gcjPoint, String lngCustom, String latCustom) {
+        double[] latLng = MapUtils.gcj02towgs84(gcjPoint.longitude, gcjPoint.latitude);
 
         //搜索历史 插表参数
         SearchRow searchRow = new SearchRow(name, address,
@@ -128,31 +123,24 @@ public class PoiSearchHelper {
     }
 
     /**
-     * 销毁 SuggestionSearch（原 onDestroy 的 //poi search destroy 段）
-     */
-    public void destroy() {
-        mSuggestionSearch.destroy();
-    }
-
-    /**
-     * SuggestionResult→List&lt;Map&gt; 转换（原 MainActivity.getMapList 静态方法原样迁入；
-     * 过滤无坐标项，键名与 SimpleAdapter 列契约一致）
+     * Tip→List&lt;Map&gt; 转换(原 SuggestionResult→Map 转换对应物;
+     * 过滤无坐标项,键名与 SimpleAdapter 列契约一致)
      */
     @NonNull
-    public static List<Map<String, Object>> getMapList(SuggestionResult suggestionResult) {
+    public static List<Map<String, Object>> getTipList(List<Tip> tips) {
         List<Map<String, Object>> data = new ArrayList<>();
-        int retCnt = suggestionResult.getAllSuggestions().size();
 
-        for (int i = 0; i < retCnt; i++) {
-            if (suggestionResult.getAllSuggestions().get(i).pt == null) {
+        for (Tip tip : tips) {
+            LatLonPoint point = tip.getPoint();
+            if (point == null) {
                 continue;
             }
 
             Map<String, Object> poiItem = new HashMap<>();
-            poiItem.put(POI_NAME, suggestionResult.getAllSuggestions().get(i).key);
-            poiItem.put(POI_ADDRESS, suggestionResult.getAllSuggestions().get(i).city + " " + suggestionResult.getAllSuggestions().get(i).district);
-            poiItem.put(POI_LONGITUDE, "" + suggestionResult.getAllSuggestions().get(i).pt.longitude);
-            poiItem.put(POI_LATITUDE, "" + suggestionResult.getAllSuggestions().get(i).pt.latitude);
+            poiItem.put(POI_NAME, tip.getName());
+            poiItem.put(POI_ADDRESS, tip.getDistrict() + " " + tip.getAddress());
+            poiItem.put(POI_LONGITUDE, "" + point.getLongitude());
+            poiItem.put(POI_LATITUDE, "" + point.getLatitude());
             data.add(poiItem);
         }
         return data;

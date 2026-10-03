@@ -19,10 +19,13 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
--keep class com.baidu.** {*;}
--keep class vi.com.** {*;}
--keep class com.baidu.vi.** {*;}
--dontwarn com.baidu.**
+# 高德 SDK(3dmap/search/location)
+-keep class com.amap.api.** {*;}
+-keep class com.autonavi.** {*;}
+-dontwarn com.amap.api.**
+-dontwarn com.autonavi.**
+# 高德定位可选 GNSS 组件未随包分发,R8 missing_rules.txt 生成规则(assembleRelease 实测)
+-dontwarn com.amap.ams.gnss.GnssSoftLocator
 
 # OkHttp platform used only on JVM and when Conscrypt and other security providers are available.
 -dontwarn okhttp3.internal.platform.**
