@@ -77,7 +77,7 @@ android {
         }
     }
 
-    // 启用 BuildConfig 以支持上面的 buildConfigField 内联注入（MAPS_API_KEY / MAPS_SAFE_CODE，值取自 local.properties）
+    // 启用 BuildConfig（原 buildConfigField 注入 MAPS_API_KEY/MAPS_SAFE_CODE 已随 SDK 迁移改为 manifestPlaceholders:AMAP_API_KEY）
     buildFeatures {
         buildConfig = true
     }
@@ -141,7 +141,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'androidx.arch.core:core-testing:2.2.0'
     // 本地 JVM 单测默认使用 android.jar 的 org.json 桩（全部方法抛 not mocked），
-    // 引入真实 org.json 构件（仅测试作用域）供 GeocoderHelperTest 解析真实 JSON
+    // 引入真实 org.json 构件（仅测试作用域）供 UpdateManagerTest 解析真实 JSON（UpdateManager.parseRelease）
     // NewerVersionAvailable：测试作用域刻意固定版本，与 okhttp 同模式
     //noinspection NewerVersionAvailable
     testImplementation 'org.json:json:20240303'

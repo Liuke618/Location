@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 主界面状态持有器（Phase 2 收尾）：仅承载状态镜像，不含业务逻辑、不持 Context、不触 Baidu SDK。
+ * 主界面状态持有器（Phase 2 收尾）：仅承载状态镜像，不含业务逻辑、不持 Context、不触高德 SDK。
  * 依赖经 {@link Factory} 构造注入（MapState 来自 GoApplication.AppContainer 单例）。
  *
  * <p>四项 LiveData 契约（Phase 2 Task 9）：
@@ -87,7 +87,7 @@ public class MainViewModel extends ViewModel {
     }
 
     /**
-     * 当前地址镜像：GeocoderHelper 回调线程（OkHttp / Baidu SDK）调用，postValue 异步送达
+     * 当前地址镜像：GeocoderHelper 回调线程（高德 SDK）调用，postValue 异步送达
      * 主线程观察者；不改写回调自身的线程模型与后续落库/渲染时序。
      */
     public void postCurrentAddress(String address) {

@@ -310,24 +310,24 @@ public class HistoryActivity extends BaseActivity {
         mSearchLayout = findViewById(R.id.search_linear);
         mRecordListView = findViewById(R.id.record_list_view);
         mRecordListView.setOnItemClickListener((adapterView, view, i, l) -> {
-            String bd09Longitude;
-            String bd09Latitude;
+            String gcjLongitude;
+            String gcjLatitude;
             String name;
             name = (String) ((TextView) view.findViewById(R.id.LocationText)).getText();
             String bd09LatLng = (String) ((TextView) view.findViewById(R.id.BDLatLngText)).getText();
             bd09LatLng = bd09LatLng.substring(bd09LatLng.indexOf('[') + 1, bd09LatLng.indexOf(']'));
             String[] latLngStr = bd09LatLng.split(" ");
-            bd09Longitude = latLngStr[0].substring(latLngStr[0].indexOf(':') + 1);
-            bd09Latitude = latLngStr[1].substring(latLngStr[1].indexOf(':') + 1);
+            gcjLongitude = latLngStr[0].substring(latLngStr[0].indexOf(':') + 1);
+            gcjLatitude = latLngStr[1].substring(latLngStr[1].indexOf(':') + 1);
 
             // Random offset
             if(sharedPreferences.getBoolean("setting_random_offset", false)) {
-                String[] offsetResult = randomOffset(bd09Longitude, bd09Latitude);
-                bd09Longitude = offsetResult[0];
-                bd09Latitude = offsetResult[1];
+                String[] offsetResult = randomOffset(gcjLongitude, gcjLatitude);
+                gcjLongitude = offsetResult[0];
+                gcjLatitude = offsetResult[1];
             }
 
-            if (!MainActivity.showLocation(name, bd09Longitude, bd09Latitude)) {
+            if (!MainActivity.showLocation(name, gcjLongitude, gcjLatitude)) {
                 GoUtils.DisplayToast(this, getResources().getString(R.string.history_error_location));
             }
             this.finish();

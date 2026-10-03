@@ -118,7 +118,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     private ListView mSearchHistoryList;
     private LinearLayout mHistoryLayout;
     private MenuItem searchItem;
-    //建议搜索管线：SuggestionSearch 与搜索历史读写收编于 PoiSearchHelper，渲染回调体保留在本类
+    //建议搜索管线：Inputtips 与搜索历史读写收编于 PoiSearchHelper，渲染回调体保留在本类
     private PoiSearchHelper mPoiSearchHelper;
     /*============================== 更新 相关 ==============================*/
     //更新检测/下载/安装管线收编于 UpdateManager（对话框组装随流程迁入，见该类）
@@ -718,7 +718,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
 
     /*============================== 上次位置记忆 ==============================*/
 
-    //落盘当前选中点(BD09),作为"上一次定位的位置";GO 两个生效分支调用,须在选中点清除前执行
+    //落盘当前选中点(GCJ02),作为"上一次定位的位置";GO 两个生效分支调用,须在选中点清除前执行
     private void saveLastPosition() {
         LatLng point = mMapState.getSelectedPoint();
         if (point == null) {
@@ -886,7 +886,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                     .show();
             return true;
         });
-        //设置搜索建议返回值监听：SuggestionSearch 构造与监听注册收编于 PoiSearchHelper（建议搜索管线），
+        //设置搜索建议返回值监听：Inputtips 构造与监听注册收编于 PoiSearchHelper（建议搜索管线），
         //无结果提示与列表渲染回调体保留在本类（原样）
         mPoiSearchHelper = new PoiSearchHelper(this, mHistoryRepository, new PoiSearchHelper.SuggestionListener() {
             @Override

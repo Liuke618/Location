@@ -1,7 +1,6 @@
 package com.zcshou.ui.map;
 
 import android.os.Bundle;
-import android.view.View;
 
 import com.amap.api.maps.AMap;
 import com.amap.api.maps.CameraUpdateFactory;
