@@ -11,7 +11,6 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.wifi.WifiManager;
-import android.os.CountDownTimer;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.widget.Toast;
@@ -228,33 +227,5 @@ public class GoUtils {
         Toast toast = Toast.makeText(context, str, Toast.LENGTH_LONG);
         toast.setGravity(Gravity.TOP, 0, 100);
         toast.show();
-    }
-
-    /* 计数器类 */
-    public static class TimeCount extends CountDownTimer {
-        private TimeCountListener mListener;
-
-        public TimeCount(long millisInFuture, long countDownInterval) {
-            super(millisInFuture, countDownInterval);//参数依次为总时长,和计时的时间间隔
-        }
-
-        @Override
-        public void onFinish() {//计时完毕时触发
-            mListener.onFinish();
-        }
-
-        @Override
-        public void onTick(long millisUntilFinished) { //计时过程显示
-            mListener.onTick(millisUntilFinished);
-        }
-
-        public void setListener(TimeCountListener mListener) {
-            this.mListener = mListener;
-        }
-
-        public interface TimeCountListener {
-            void onTick(long millisUntilFinished);
-            void onFinish();
-        }
     }
 }
