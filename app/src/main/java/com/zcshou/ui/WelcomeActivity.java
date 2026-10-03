@@ -47,6 +47,8 @@ public class WelcomeActivity extends AppCompatActivity {
     private static final ArrayList<String> ReqPermissions = new ArrayList<>();
 
     private CheckBox checkBox;
+    // 程序性变更勾选状态(弹窗同意后)期间静默交互回调
+    private boolean mSilenceCheckboxCallbacks = false;
     private Boolean mAgreement;
     private Boolean mPrivacy;
 
@@ -179,12 +181,14 @@ public class WelcomeActivity extends AppCompatActivity {
     }
 
     private void doAcceptation() {
+        mSilenceCheckboxCallbacks = true;
         if (mAgreement && mPrivacy) {
             checkBox.setChecked(true);
             checkDefaultPermissions();
         } else {
             checkBox.setChecked(false);
         }
+        mSilenceCheckboxCallbacks = false;
         //实例化Editor对象
         SharedPreferences.Editor editor = preferences.edit();
         //存入数据
@@ -192,6 +196,17 @@ public class WelcomeActivity extends AppCompatActivity {
         editor.putBoolean(KEY_ACCEPT_PRIVACY, mPrivacy);
         //提交修改
         editor.apply();
+    }
+
+    // 勾选复选框但尚未同意完时,依序弹出协议、隐私弹窗
+    private void showAcceptanceFlow() {
+        if (!mAgreement) {
+            showAgreementDialog();
+            return;
+        }
+        if (!mPrivacy) {
+            showPrivacyDialog();
+        }
     }
 
     private void showAgreementDialog() {
@@ -226,6 +241,11 @@ public class WelcomeActivity extends AppCompatActivity {
                 doAcceptation();
 
                 alertDialog.cancel();
+
+                // 自动流程:协议同意后若隐私未同意,接着弹出隐私弹窗
+                if (!mPrivacy) {
+                    showPrivacyDialog();
+                }
             });
         }
     }
@@ -290,8 +310,8 @@ public class WelcomeActivity extends AppCompatActivity {
         checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
                 if (!mPrivacy || !mAgreement) {
-                    GoUtils.DisplayToast(this, getResources().getString(R.string.app_error_read));
-                    checkBox.setChecked(false);
+                    // 未同意完时不再弹回,改为自动依序弹出协议、隐私弹窗
+                    showAcceptanceFlow();
                 }
             } else {
                 mPrivacy = false;

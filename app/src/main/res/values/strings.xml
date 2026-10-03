@@ -25,7 +25,6 @@
     </string>
     <string name="app_agreement_privacy">已阅读《用户协议》和《隐私政策》</string>
     <string name="app_error_agreement">必须先接受\n《用户协议》和《隐私政策》</string>
-    <string name="app_error_read">请依次阅读并接受\n《用户协议》和《隐私政策》</string>
     <string name="app_error_gps">定位不可用，请检查 GPS 是否开启</string>
     <string name="app_error_network">网络不可用，请检查网络连接</string>
     <string name="app_error_permission">权限不足，请授予相关权限</string>
