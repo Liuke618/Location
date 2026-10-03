@@ -149,6 +149,26 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         XLog.i("MainActivity: onCreate");
 
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        //坐标系迁移:V1 的"上次位置"存的是 BD09,一次性转为 GCJ02(标记防重入)
+        if (!sharedPreferences.getBoolean("setting_coord_migrated", false)) {
+            String lastLat = sharedPreferences.getString("setting_last_lat", "");
+            String lastLng = sharedPreferences.getString("setting_last_lng", "");
+            if (!lastLat.isEmpty() && !lastLng.isEmpty()) {
+                try {
+                    double[] gcj = MapUtils.bd09togcj02(Double.parseDouble(lastLng), Double.parseDouble(lastLat));
+                    sharedPreferences.edit()
+                            .putString("setting_last_lng", String.valueOf(gcj[0]))
+                            .putString("setting_last_lat", String.valueOf(gcj[1]))
+                            .putBoolean("setting_coord_migrated", true)
+                            .apply();
+                } catch (NumberFormatException e) {
+                    //存值损坏:放弃迁移但置位标记,按无存值处理
+                    sharedPreferences.edit().putBoolean("setting_coord_migrated", true).apply();
+                }
+            } else {
+                sharedPreferences.edit().putBoolean("setting_coord_migrated", true).apply();
+            }
+        }
 
         //MapState 获取自 initMap 提前至此：主界面状态持有器构造注入同一 AppContainer 单例
         mMapState = ((GoApplication) getApplicationContext()).getAppContainer().getMapState();

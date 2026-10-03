@@ -23,7 +23,7 @@ public class DataBaseHistorySearch extends SQLiteOpenHelper {
     // 搜索结果
     public static final int DB_SEARCH_TYPE_RESULT = 1;
 
-    private static final int DB_VERSION = 1;
+    private static final int DB_VERSION = 2;
     private static final String DB_NAME = "HistorySearch.db";
     private static final String CREATE_TABLE = "create table if not exists " + TABLE_NAME +
             " (DB_COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT, DB_COLUMN_KEY TEXT NOT NULL, " +
@@ -42,9 +42,11 @@ public class DataBaseHistorySearch extends SQLiteOpenHelper {
     
     @Override
     public void onUpgrade(SQLiteDatabase sqLiteDatabase, int oldVersion, int newVersion) {
-        String sql = "DROP TABLE IF EXISTS " + TABLE_NAME;
-        sqLiteDatabase.execSQL(sql);
-        onCreate(sqLiteDatabase);
+        // V1→V2:CUSTOM 列坐标系 BD09→GCJ02(数据保留;原"DROP 重建"语义废弃)
+        if (oldVersion < 2) {
+            DbMigrations.migrateBd09CustomToGcj02(sqLiteDatabase, TABLE_NAME,
+                    DB_COLUMN_LONGITUDE_CUSTOM, DB_COLUMN_LATITUDE_CUSTOM);
+        }
     }
 
     public static void saveHistorySearch(SQLiteDatabase sqLiteDatabase, ContentValues contentValues) {
