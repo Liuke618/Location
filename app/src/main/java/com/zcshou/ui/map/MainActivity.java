@@ -166,6 +166,11 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
 
         initMap();
 
+        //启动恢复:仅冷启动执行,把上次模拟位置直接就绪(上标记+移视野,选中点可一键 GO)
+        if (savedInstanceState == null) {
+            restoreLastPosition();
+        }
+
         //定位数据源：LocationClient 构造/配置/启停收编于 CurrentLocationSource，回调体保留在本类（原样）
         mCurrentLocationSource = new CurrentLocationSource(this, this);
         mCurrentLocationSource.init();
@@ -664,6 +669,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                         .setAction("Action", null).show();
 
                 recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
+                //记住本次模拟位置(冷启动恢复用),须在选中点清除前落盘
+                saveLastPosition();
 
                 mMapController.getBaiduMap().clear();
                 mMainViewModel.clearSelectedPoint();
@@ -691,6 +698,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                             .setAction("Action", null).show();
 
                     recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
+                    //记住本次模拟位置(冷启动恢复用),须在选中点清除前落盘
+                    saveLastPosition();
                     mMapController.getBaiduMap().clear();
                     mMainViewModel.clearSelectedPoint();
 
@@ -699,6 +708,43 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                     }
                 }
             }
+        }
+    }
+
+    /*============================== 上次位置记忆 ==============================*/
+
+    //落盘当前选中点(BD09),作为"上一次定位的位置";GO 两个生效分支调用,须在选中点清除前执行
+    private void saveLastPosition() {
+        LatLng point = mMapState.getSelectedPoint();
+        if (point == null) {
+            return;
+        }
+
+        sharedPreferences.edit()
+                .putString("setting_last_lat", String.valueOf(point.latitude))
+                .putString("setting_last_lng", String.valueOf(point.longitude))
+                .apply();
+    }
+
+    //冷启动恢复:有存值则选中上次模拟位置并移动视野(街道级,与"返回当前位置"一致);无存值保持原默认行为
+    private void restoreLastPosition() {
+        String lat = sharedPreferences.getString("setting_last_lat", "");
+        String lng = sharedPreferences.getString("setting_last_lng", "");
+        if (lat.isEmpty() || lng.isEmpty()) {
+            return;
+        }
+
+        try {
+            LatLng lastPoint = new LatLng(Double.parseDouble(lat), Double.parseDouble(lng));
+            mMainViewModel.selectPoint(lastPoint);
+            mMapController.markMap();
+
+            MapStatus.Builder builder = new MapStatus.Builder();
+            builder.target(lastPoint).zoom(18.0f);
+            mMapController.getBaiduMap().animateMapStatus(MapStatusUpdateFactory.newMapStatus(builder.build()));
+        } catch (NumberFormatException e) {
+            //存值损坏时按无存值处理,不阻断启动
+            XLog.e("MainActivity: last position invalid, skip restore");
         }
     }
 
