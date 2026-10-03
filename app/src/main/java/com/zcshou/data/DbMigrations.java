@@ -34,20 +34,24 @@ public final class DbMigrations {
 
     /** V1→V2:表内 CUSTOM(BD09) 坐标列整体迁为 GCJ02;坏行保留原值并记日志(行级隔离) */
     public static void migrateBd09CustomToGcj02(SQLiteDatabase db, String table, String lngColumn, String latColumn) {
+        int migrated = 0;
+        int failedRows = 0;
         try (Cursor cursor = db.rawQuery("SELECT rowid, " + lngColumn + ", " + latColumn + " FROM " + table, null)) {
             ContentValues values = new ContentValues();
             while (cursor.moveToNext()) {
                 String[] gcj = bd09ToGcj02(cursor.getString(1), cursor.getString(2));
                 if (gcj == null) {
                     XLog.e("DATABASE: bd09->gcj02 skip invalid row " + cursor.getLong(0));
+                    failedRows++;
                     continue;
                 }
                 values.put(lngColumn, gcj[0]);
                 values.put(latColumn, gcj[1]);
                 db.update(table, values, "rowid = ?", new String[] { String.valueOf(cursor.getLong(0)) });
+                migrated++;
             }
         } catch (Exception e) {
-            XLog.e("DATABASE: bd09->gcj02 migration failed");
+            XLog.e("DATABASE: bd09->gcj02 migration failed, migrated=" + migrated + ", failedRows=" + failedRows, e);
         }
     }
 }

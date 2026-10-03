@@ -103,6 +103,12 @@ public class MapController {
         }
     }
 
+    //清空覆盖物(持有者直接清图时经此走,保持 mMarker 引用一致)
+    public void clearOverlays() {
+        mAMap.clear();
+        mMarker = null;
+    }
+
     // 在地图上显示位置
     public boolean showLocation(String name, String gcjLongitude, String gcjLatitude) {
         boolean ret = true;

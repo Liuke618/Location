@@ -4,6 +4,7 @@ import android.app.Application;
 
 import com.amap.api.location.AMapLocationClient;
 import com.amap.api.maps.MapsInitializer;
+import com.amap.api.services.core.ServiceSettings;
 
 import com.elvishew.xlog.LogConfiguration;
 import com.elvishew.xlog.LogLevel;
@@ -35,6 +36,9 @@ public class GoApplication extends Application {
         MapsInitializer.updatePrivacyAgree(this, true);
         AMapLocationClient.updatePrivacyShow(this, true, true);
         AMapLocationClient.updatePrivacyAgree(this, true);
+        // 搜索 SDK 的隐私接口独立于地图/定位(合成包三者各自校验,漏调= POI/逆地理报 1907)
+        ServiceSettings.getInstance().updatePrivacyShow(this, true, true);
+        ServiceSettings.getInstance().updatePrivacyAgree(this, true);
 
         mAppContainer = new AppContainer(this);
     }

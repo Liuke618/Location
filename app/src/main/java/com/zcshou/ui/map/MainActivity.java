@@ -289,7 +289,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                     //查询下发与关键字保存收编于 PoiSearchHelper（try/catch 与 UI 处理保留在此，异常语义不变）
                     mPoiSearchHelper.requestSuggestions(query, mMapState.getCurrentCity());
                     mPoiSearchHelper.saveQueryHistory(query);
-                    mMapController.getAMap().clear();
+                    mMapController.clearOverlays();
                     mSearchLayout.setVisibility(View.INVISIBLE);
                 } catch (Exception e) {
                     GoUtils.DisplayToast(MainActivity.this, getResources().getString(R.string.app_error_search));
@@ -677,7 +677,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 //记住本次模拟位置(冷启动恢复用),须在选中点清除前落盘
                 saveLastPosition();
 
-                mMapController.getAMap().clear();
+                mMapController.clearOverlays();
                 mMainViewModel.clearSelectedPoint();
 
                 if (GoUtils.isWifiEnabled(MainActivity.this)) {
@@ -705,7 +705,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                     recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
                     //记住本次模拟位置(冷启动恢复用),须在选中点清除前落盘
                     saveLastPosition();
-                    mMapController.getAMap().clear();
+                    mMapController.clearOverlays();
                     mMainViewModel.clearSelectedPoint();
 
                     if (GoUtils.isWifiEnabled(MainActivity.this)) {
