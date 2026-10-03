@@ -5,36 +5,6 @@
     <PreferenceCategory
         app:title="@string/setting_group_move"
         app:iconSpaceReserved="false">
-        <ListPreference
-            app:key="setting_joystick_type"
-            app:title="@string/setting_joystick_type"
-            app:entries="@array/array_joystick_type"
-            app:entryValues="@array/array_joystick_type_values"
-            app:dialogTitle="@string/setting_joystick_type"
-            app:defaultValue="0"
-            app:iconSpaceReserved="false">
-        </ListPreference>
-
-        <EditTextPreference
-            app:key="setting_walk"
-            app:title="@string/setting_walk"
-            app:defaultValue="@string/setting_walk_default"
-            app:summary="@string/setting_walk_default"
-            app:iconSpaceReserved="false"/>
-
-        <EditTextPreference
-            app:key="setting_run"
-            app:title="@string/setting_run"
-            app:defaultValue="@string/setting_run_default"
-            app:summary="@string/setting_run_default"
-            app:iconSpaceReserved="false"/>
-
-        <EditTextPreference
-            app:key="setting_bike"
-            app:title="@string/setting_bike"
-            app:defaultValue="@string/setting_bike_default"
-            app:summary="@string/setting_bike_default"
-            app:iconSpaceReserved="false"/>
 
         <EditTextPreference
             app:key="setting_altitude"

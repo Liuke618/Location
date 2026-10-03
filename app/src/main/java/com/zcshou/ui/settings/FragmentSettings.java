@@ -4,7 +4,6 @@ import android.os.Bundle;
 import android.text.InputType;
 
 import androidx.preference.EditTextPreference;
-import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.SwitchPreferenceCompat;
@@ -13,8 +12,6 @@ import com.baidu.mapapi.SDKInitializer;
 import com.elvishew.xlog.XLog;
 import com.zcshou.utils.GoUtils;
 import com.zcshou.gogogo.R;
-
-import java.util.Objects;
 
 public class FragmentSettings extends PreferenceFragmentCompat {
 
@@ -40,22 +37,6 @@ public class FragmentSettings extends PreferenceFragmentCompat {
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
         // Load the preferences from an XML resource
         addPreferencesFromResource(R.xml.preferences_main);
-
-        ListPreference pfJoystick = findPreference("setting_joystick_type");
-        if (pfJoystick != null) {
-            // 使用自定义 SummaryProvider
-            pfJoystick.setSummaryProvider((Preference.SummaryProvider<ListPreference>) preference -> Objects.requireNonNull(preference.getEntry()));
-            pfJoystick.setOnPreferenceChangeListener((preference, newValue) -> !newValue.toString().trim().isEmpty());
-        }
-
-        EditTextPreference pfWalk = findPreference("setting_walk");
-        setupDecimalEditTextPreference(pfWalk);
-
-        EditTextPreference pfRun = findPreference("setting_run");
-        setupDecimalEditTextPreference(pfRun);
-
-        EditTextPreference pfBike = findPreference("setting_bike");
-        setupDecimalEditTextPreference(pfBike);
 
         EditTextPreference pfAltitude = findPreference("setting_altitude");
         setupDecimalEditTextPreference(pfAltitude);

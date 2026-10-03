@@ -3,8 +3,5 @@
     <color name="colorPrimary">#ff008577</color>
     <color name="colorAccent">#ff00897B</color>
 
-    <color name="lightgrey">#d3d3d3</color> <!-- 亮灰色 -->
     <color name="gray">#808080</color> <!-- 灰色 -->
-    <color name="grey">#808080</color> <!-- 灰色 -->
-    <color name="black">#000000</color> <!-- 黑色 -->
 </resources>

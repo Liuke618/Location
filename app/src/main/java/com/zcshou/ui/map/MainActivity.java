@@ -576,8 +576,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
             builder.setView(view);
             dialog = builder.show();
 
-            EditText dialog_lng = view.findViewById(R.id.joystick_longitude);
-            EditText dialog_lat = view.findViewById(R.id.joystick_latitude);
+            EditText dialog_lng = view.findViewById(R.id.input_longitude);
+            EditText dialog_lat = view.findViewById(R.id.input_latitude);
             RadioButton rbBD = view.findViewById(R.id.pos_type_bd);
 
             Button btnGo = view.findViewById(R.id.input_position_ok);

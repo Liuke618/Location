@@ -31,14 +31,11 @@
     <string name="app_error_input">输入有误，请检查输入是否合法</string>
     <string name="app_error_input_null">输入不能为空，请重新输入内容</string>
     <string name="app_error_search">查找失败，请检查网络或定位</string>
-    <string name="app_error_location">请先选择位置</string>
     <string name="app_error_dev">开发者模式未开启，无法跳转！请自行搜索开启方法</string>
     <string name="app_error_param">非法参数</string>
     <string name="app_error_longitude">经度超出限制!\n取值：-180.0 ~ 180.0</string>
     <string name="app_error_latitude">纬度超出限制!\n取值：-90.0 ~ 90.0</string>
     <string name="app_search_null">没有匹配结果，请重新搜索</string>
-    <string name="app_search_tips">请输入查找内容</string>
-    <string name="app_location_ok">位置已传送</string>
     <string name="app_location_copy">位置已复制到剪切板</string>
     <string name="app_location_save">位置已保存</string>
 
@@ -47,15 +44,8 @@
     <string name="app_btn_agree">同意并继续</string>
     <string name="app_btn_disagree">不同意</string>
 
-    <!-- 移动相关参数 -->
-    <string name="setting_group_move">移动</string>
-    <string name="setting_joystick_type">摇杆类型</string>
-    <string name="setting_walk">步行速度(米/秒)</string>
-    <string name="setting_walk_default">1.2</string>
-    <string name="setting_run">跑步速度(米/秒)</string>
-    <string name="setting_run_default">3.6</string>
-    <string name="setting_bike">驾驶速度(米/秒)</string>
-    <string name="setting_bike_default">10.0</string>
+    <!-- 位置模拟参数 -->
+    <string name="setting_group_move">位置模拟</string>
     <string name="setting_altitude">海拔高度(米)</string>
     <string name="setting_altitude_default">55.0</string>
 
@@ -84,15 +74,6 @@
     <string name="history_error_location">定位失败，请手动选取定位点</string>
     <string name="history_error_search">未搜索到指定内容</string>
 
-    <!-- 摇杆 -->
-    <string name="joystick_map_tips">搜索或点击地图位置</string>
-    <string name="joystick_history_tips">搜索或点击历史位置</string>
-    <string name="joystick_history">历史记录</string>
-    <string name="joystick_map">地图</string>
-    <string name="joystick_move">移动</string>
-    <string name="joystick_walk">步行</string>
-    <string name="joystick_run">跑步</string>
-    <string name="joystick_bike">自行车</string>
     <!-- 导航页 -->
     <string name="nav_drawer_open">打开导航菜单</string>
     <string name="nav_drawer_close">关闭导航菜单</string>

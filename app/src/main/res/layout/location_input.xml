@@ -5,7 +5,7 @@
     android:orientation="vertical">
 
     <EditText
-        android:id="@+id/joystick_longitude"
+        android:id="@+id/input_longitude"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
@@ -18,7 +18,7 @@
         android:minHeight="48dp" />
 
     <EditText
-        android:id="@+id/joystick_latitude"
+        android:id="@+id/input_latitude"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
