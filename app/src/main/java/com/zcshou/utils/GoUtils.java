@@ -10,7 +10,6 @@ import android.location.provider.ProviderProperties;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
-import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.CountDownTimer;
 import android.provider.Settings;
@@ -184,26 +183,6 @@ public class GoUtils {
                     }
                 })
                 .setNegativeButton("取消",(dialog, which) -> {
-                })
-                .show();
-    }
-
-    //提醒开启悬浮窗的弹框
-    public static  void showEnableFloatWindowDialog(Context context) {
-        new AlertDialog.Builder(context)
-                .setTitle("启用悬浮窗")//这里是表头的内容
-                .setMessage("为了模拟定位的稳定性，建议开启\"显示悬浮窗\"选项")//这里是中间显示的具体信息
-                .setPositiveButton("设置",(dialog, which) -> {
-                    try {
-                        Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + context.getPackageName()));
-                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        context.startActivity(intent);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                })
-                .setNegativeButton("取消", (dialog, which) -> {
-
                 })
                 .show();
     }

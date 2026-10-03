@@ -648,12 +648,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
             return;
         }
 
-        if (!Settings.canDrawOverlays(getApplicationContext())) {//悬浮窗权限判断
-            GoUtils.showEnableFloatWindowDialog(this);
-            XLog.e("无悬浮窗权限!");
-            return;
-        }
-
         if (mMockController.isRunning()) {
             if (mMapState.getSelectedPoint() == null) {
                 mMockController.stop();
