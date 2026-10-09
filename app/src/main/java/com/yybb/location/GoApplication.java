@@ -3,6 +3,7 @@ package com.yybb.location;
 import android.app.Application;
 
 import com.amap.api.location.AMapLocationClient;
+import com.google.android.material.color.DynamicColors;
 import com.amap.api.maps.MapsInitializer;
 import com.amap.api.services.core.ServiceSettings;
 
@@ -41,6 +42,9 @@ public class GoApplication extends Application {
         ServiceSettings.getInstance().updatePrivacyAgree(this, true);
 
         mAppContainer = new AppContainer(this);
+
+        // Material You 动态取色:为全部 Activity 叠加设备取色覆盖层(基于 M3 主题,系统壁纸决定实际配色)
+        DynamicColors.applyToActivitiesIfAvailable(this);
     }
 
     public AppContainer getAppContainer() {

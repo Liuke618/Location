@@ -19,7 +19,7 @@
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
-                android:background="@color/colorPrimary"
+                android:background="?attr/colorSurface"
                 app:popupTheme="@style/AppTheme.PopupOverlay" />
 
         </com.google.android.material.appbar.AppBarLayout>
@@ -46,8 +46,9 @@
             android:id="@+id/search_linear"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#ddffffff"
+            android:background="?attr/colorSurface"
             android:visibility="gone"
+            android:elevation="4dp"
             android:layout_marginTop="?attr/actionBarSize">
             <ListView
                 android:id="@+id/search_list_view"
@@ -61,8 +62,9 @@
             android:id="@+id/search_history_linear"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#ddffffff"
+            android:background="?attr/colorSurface"
             android:visibility="gone"
+            android:elevation="4dp"
             android:layout_marginTop="?attr/actionBarSize">
             <ListView
                 android:id="@+id/search_history_list_view"

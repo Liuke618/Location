@@ -1,0 +1,4 @@
+<resources>
+    <!-- 深色模式下系统栏图标用浅色 -->
+    <bool name="light_system_icons">false</bool>
+</resources>

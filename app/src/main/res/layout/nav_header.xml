@@ -7,8 +7,7 @@
     android:orientation="vertical"
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
-    android:paddingTop="@dimen/activity_vertical_margin"
-    android:theme="@style/ThemeOverlay.AppCompat.Dark">
+    android:paddingTop="@dimen/activity_vertical_margin">
 
     <ImageView
         android:id="@+id/app_icon"
@@ -28,8 +27,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/app_name"
-            android:textSize="18sp"
-            android:textAppearance="@style/TextAppearance.AppCompat.Body1" />
+            android:textColor="?attr/colorOnPrimaryContainer"
+            android:textSize="20sp"
+            android:textStyle="bold" />
         <Space
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -41,7 +41,8 @@
             android:layout_height="wrap_content"
             android:text=""
             android:drawablePadding="5dip"
-            android:textAppearance="@style/TextAppearance.AppCompat.Body1" />
+            android:textColor="?attr/colorOnPrimaryContainer"
+            android:textSize="14sp" />
     </LinearLayout>
 
     <TextView
@@ -52,7 +53,10 @@
         android:layout_gravity="center_vertical"
         android:gravity="center_vertical"
         android:text="@string/nav_app_tips"
+        android:textColor="?attr/colorOnPrimaryContainer"
+        android:textSize="14sp"
         android:drawablePadding="5dip"
+        app:drawableTint="?attr/colorOnPrimaryContainer"
         app:drawableStartCompat="@drawable/ic_msg"/>
 
 </LinearLayout>

@@ -21,13 +21,19 @@
 
         <RadioGroup
             android:id="@+id/RadioGroupMapType"
-            android:layout_width="90dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_alignParentTop="true"
-            android:layout_marginEnd="5dp"
-            android:layout_marginTop="4dip"
-            android:orientation="vertical">
+            android:layout_marginTop="12dp"
+            android:layout_marginEnd="12dp"
+            android:orientation="vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:background="@drawable/bg_map_controls"
+            android:elevation="6dp">
 
             <RadioButton
                 android:id="@+id/mapNormal"
@@ -35,78 +41,87 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:checked="true"
-                android:minHeight="48dp"
-                android:text="@string/map_pic_normal"
-                android:textColor="#00796B" />
+                android:minHeight="44dp"
+                android:text="@string/map_pic_normal" />
 
             <RadioButton
                 android:id="@+id/mapSatellite"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:minHeight="48dp"
-                android:text="@string/map_pic_sate"
-                android:textColor="#00796B" />
+                android:minHeight="44dp"
+                android:text="@string/map_pic_sate" />
         </RadioGroup>
 
-        <ImageButton
-            android:id="@+id/cur_position"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+        <!-- 地图右侧悬浮控制组:输入坐标/回位/缩放 -->
+        <LinearLayout
+            android:id="@+id/map_control_panel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
-            android:layout_marginTop="350dp"
-            android:layout_marginEnd="10dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/cur_position"
-            android:theme="@style/RippleWhite"
-            app:srcCompat="@drawable/ic_home_position"
-            app:tint="@color/colorAccent" />
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="12dp"
+            android:orientation="vertical"
+            android:padding="6dp"
+            android:background="@drawable/bg_map_controls"
+            android:elevation="6dp">
 
-        <ImageButton
-            android:id="@+id/zoom_in"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_alignParentEnd="true"
-            android:layout_marginTop="383dp"
-            android:layout_marginEnd="10dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/zoom_in"
-            android:theme="@style/RippleWhite"
-            app:srcCompat="@drawable/ic_zoom_in"
-            app:tint="@color/colorAccent" />
+            <ImageButton
+                android:id="@+id/input_pos"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/input_button"
+                android:theme="@style/RippleWhite"
+                app:srcCompat="@drawable/ic_input"
+                app:tint="?attr/colorPrimary" />
 
-        <ImageButton
-            android:id="@+id/zoom_out"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_alignParentEnd="true"
-            android:layout_marginTop="416dp"
-            android:layout_marginEnd="10dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/zoom_out"
-            android:theme="@style/RippleWhite"
-            app:srcCompat="@drawable/ic_zoom_out"
-            app:tint="@color/colorAccent" />
+            <ImageButton
+                android:id="@+id/cur_position"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cur_position"
+                android:theme="@style/RippleWhite"
+                app:srcCompat="@drawable/ic_home_position"
+                app:tint="?attr/colorPrimary" />
 
-        <ImageButton
-            android:id="@+id/input_pos"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_alignParentEnd="true"
-            android:layout_marginTop="240dp"
-            android:layout_marginEnd="10dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/input_button"
-            android:theme="@style/RippleWhite"
-            app:srcCompat="@drawable/ic_input"
-            app:tint="@color/colorAccent" />
+            <ImageButton
+                android:id="@+id/zoom_in"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/zoom_in"
+                android:theme="@style/RippleWhite"
+                app:srcCompat="@drawable/ic_zoom_in"
+                app:tint="?attr/colorPrimary" />
 
+            <ImageButton
+                android:id="@+id/zoom_out"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/zoom_out"
+                android:theme="@style/RippleWhite"
+                app:srcCompat="@drawable/ic_zoom_out"
+                app:tint="?attr/colorPrimary" />
+        </LinearLayout>
 
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="12dp"
+            android:layout_marginStart="24dp"
+            android:layout_marginEnd="24dp"
+            android:background="@drawable/bg_statement_pill"
             android:gravity="center_horizontal|center_vertical"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="10sp"
             android:text="@string/app_statement"
             tools:ignore="SmallSp" />

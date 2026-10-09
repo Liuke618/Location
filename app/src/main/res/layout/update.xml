@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:text="@string/update_title"
-        android:textColor="#282828"
+        android:textColor="?attr/colorOnSurface"
         android:layout_marginBottom="10dp"
         android:textSize="20sp"
         android:textStyle="bold" />
@@ -72,9 +72,9 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
             android:layout_marginRight="10dp"
-            android:lineSpacingMultiplier="1.2"
-            android:textColor="#282828"
-            android:textSize="15sp" />
+                android:lineSpacingMultiplier="1.2"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="15sp" />
     </ScrollView>
 
     <LinearLayout

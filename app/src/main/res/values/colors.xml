@@ -1,7 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#ff008577</color>
-    <color name="colorAccent">#ff00897B</color>
+    <!-- Material 3 色调角色(静态基线,青色种子;设备上由 Material You 动态取色覆盖) -->
+    <color name="colorPrimary">#006B5F</color>
+    <color name="colorOnPrimary">#FFFFFF</color>
+    <color name="colorPrimaryContainer">#9CF2E4</color>
+    <color name="colorOnPrimaryContainer">#00201C</color>
 
-    <color name="gray">#808080</color> <!-- 灰色 -->
+    <color name="colorSecondary">#4A635F</color>
+    <color name="colorOnSecondary">#FFFFFF</color>
+    <color name="colorSecondaryContainer">#CCE8E2</color>
+    <color name="colorOnSecondaryContainer">#06201C</color>
+
+    <color name="colorTertiary">#48627C</color>
+    <color name="colorOnTertiary">#FFFFFF</color>
+    <color name="colorTertiaryContainer">#D0E4FF</color>
+    <color name="colorOnTertiaryContainer">#001E32</color>
+
+    <color name="colorError">#BA1A1A</color>
+    <color name="colorOnError">#FFFFFF</color>
+    <color name="colorErrorContainer">#FFDAD6</color>
+    <color name="colorOnErrorContainer">#410002</color>
+
+    <color name="colorSurface">#F5FAF7</color>
+    <color name="colorOnSurface">#171D1B</color>
+    <color name="colorSurfaceContainer">#E9EFEC</color>
+    <color name="colorSurfaceVariant">#DBE5E1</color>
+    <color name="colorOnSurfaceVariant">#3F4946</color>
+    <color name="colorOutline">#6F7976</color>
+    <color name="colorOutlineVariant">#BFC9C5</color>
 </resources>
