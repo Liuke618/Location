@@ -10,7 +10,7 @@ import androidx.preference.SwitchPreferenceCompat;
 
 import com.elvishew.xlog.XLog;
 import com.zcshou.utils.GoUtils;
-import com.zcshou.gogogo.R;
+import com.yybb.location.R;
 
 public class FragmentSettings extends PreferenceFragmentCompat {
 

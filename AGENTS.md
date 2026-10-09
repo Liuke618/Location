@@ -18,8 +18,9 @@ GoGoGo(影梭)——Android 免 Root 虚拟定位 App(GPL-3.0,仅 arm64-v8a),基
 ## 包结构与边界(违反即回归)
 
 ```
-com.zcshou
-├── gogogo      # GoApplication、BaseActivity、AppContainer(组合根,手工 DI)
+com.yybb.location          # 应用包名(applicationId/namespace)
+└── (根包)                 # GoApplication、BaseActivity、AppContainer(组合根,手工 DI)
+com.zcshou                 # 内部代码结构(历史包名,非应用包名)
 ├── ui.map      # MainActivity、MainViewModel、MapState、MapController、GeocoderHelper
 ├── ui.search|location|update|settings|history、ui.WelcomeActivity
 ├── data        # HistoryRepository(+SQLite 实现/内存 fake)、DataBaseHistory*
@@ -41,7 +42,7 @@ com.zcshou
 
 ## 已知坑
 
-- 高德 key 绑定包名 com.zcshou.gogogo + 签名 SHA1(key 无效 = 地图空白/定位搜索报错,构建不拦)
+- 高德 key 绑定包名 com.yybb.location + 签名 SHA1(key 无效 = 地图空白/定位搜索报错,构建不拦)
 - 高德隐私合规三套接口(地图 MapsInitializer / 定位 AMapLocationClient / 搜索 ServiceSettings)**各自独立、必须都调**,漏调对应能力运行时报错(搜索=1907)且构建不拦
 - 高德自定义 InfoWindow 窗体以位图渲染、**不向子 View 派发触摸事件**——长按地址气泡的保存/复制/分享/传送四按钮能否点击需真机验证(发布阻断冒烟项);失效则需改整窗 OnInfoWindowClickListener+对话框方案
 - 高德 POI 建议的 `Tip.getPoint()` 可空——入列表前须过滤无坐标项(PoiSearchHelper 已过滤)

@@ -28,7 +28,7 @@ import androidx.core.content.ContextCompat;
 
 import com.elvishew.xlog.XLog;
 import com.zcshou.ui.map.MainActivity;
-import com.zcshou.gogogo.R;
+import com.yybb.location.R;
 
 public class ServiceGo extends Service {
     // 定位相关变量

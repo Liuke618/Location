@@ -31,7 +31,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.preference.PreferenceManager;
 
 import com.zcshou.utils.GoUtils;
-import com.zcshou.gogogo.R;
+import com.yybb.location.R;
 import com.zcshou.ui.map.MainActivity;
 
 import java.util.ArrayList;

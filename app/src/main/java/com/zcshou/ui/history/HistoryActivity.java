@@ -33,9 +33,9 @@ import java.util.Map;
 
 import com.zcshou.data.HistoryRepository;
 import com.zcshou.data.HistoryRepository.LocationRow;
-import com.zcshou.gogogo.BaseActivity;
-import com.zcshou.gogogo.GoApplication;
-import com.zcshou.gogogo.R;
+import com.yybb.location.BaseActivity;
+import com.yybb.location.GoApplication;
+import com.yybb.location.R;
 import com.zcshou.utils.GoUtils;
 import com.zcshou.ui.map.MainActivity;
 

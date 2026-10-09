@@ -4,7 +4,7 @@ import com.amap.api.maps.model.BitmapDescriptor;
 import com.amap.api.maps.model.BitmapDescriptorFactory;
 import com.amap.api.maps.model.LatLng;
 
-import com.zcshou.gogogo.R;
+import com.yybb.location.R;
 
 /**
  * 应用级地图状态：原 MainActivity 的地图静态状态（选中点、标记名、当前城市、标记图标）收编于此，

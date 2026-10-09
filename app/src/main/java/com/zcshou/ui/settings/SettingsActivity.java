@@ -5,8 +5,8 @@ import android.view.MenuItem;
 
 import androidx.appcompat.app.ActionBar;
 
-import com.zcshou.gogogo.BaseActivity;
-import com.zcshou.gogogo.R;
+import com.yybb.location.BaseActivity;
+import com.yybb.location.R;
 
 public class SettingsActivity extends BaseActivity {
 

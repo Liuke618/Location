@@ -56,7 +56,7 @@
             android:foregroundServiceType="location"
             android:name="com.zcshou.service.ServiceGo" />
 
-        <!-- 高德开放平台 key(经 manifestPlaceholder 注入,绑定包名 com.zcshou.gogogo + 签名 SHA1) -->
+        <!-- 高德开放平台 key(经 manifestPlaceholder 注入,绑定包名 com.yybb.location + 签名 SHA1) -->
         <meta-data
             android:name="com.amap.api.v2.apikey"
             android:value="${AMAP_API_KEY}" />

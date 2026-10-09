@@ -1,4 +1,4 @@
-package com.zcshou.gogogo;
+package com.yybb.location;
 
 import android.app.Application;
 

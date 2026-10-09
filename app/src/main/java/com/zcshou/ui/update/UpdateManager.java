@@ -30,7 +30,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
-import com.zcshou.gogogo.R;
+import com.yybb.location.R;
 import com.zcshou.utils.ShareUtils;
 import com.zcshou.utils.GoUtils;
 

@@ -17,7 +17,7 @@ android {
     // GradleDependency：SDK 37 已可用；compileSdk 升级需连动 AGP 兼容性评估，属行为变更，本分支锁定 36（分支既定决策）
     //noinspection GradleDependency
     compileSdk = 36
-    namespace = 'com.zcshou.gogogo'
+    namespace = 'com.yybb.location'
 
     signingConfigs {
         debug {
@@ -35,7 +35,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.zcshou.gogogo"
+        applicationId "com.yybb.location"
         minSdk 31
         // OldTargetApi：targetSdk 37 需先完成新版行为变更适配，属行为变更，本分支锁定 36（分支既定决策）
         //noinspection OldTargetApi
