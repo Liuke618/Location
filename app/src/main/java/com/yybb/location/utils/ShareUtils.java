@@ -8,6 +8,9 @@ import androidx.core.content.FileProvider;
 
 import java.io.File;
 
+/**
+ * 分享工具：经 FileProvider 生成文件的内容 URI 并构造系统分享 Intent。
+ */
 public class ShareUtils {
     /**
      * 返回uri

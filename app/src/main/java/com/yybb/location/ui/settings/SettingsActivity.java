@@ -8,6 +8,9 @@ import androidx.appcompat.app.ActionBar;
 import com.yybb.location.BaseActivity;
 import com.yybb.location.R;
 
+/**
+ * 设置页容器：承载 FragmentSettings，提供带返回入口的 ActionBar。
+ */
 public class SettingsActivity extends BaseActivity {
 
     @Override

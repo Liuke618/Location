@@ -1,5 +1,8 @@
 package com.yybb.location.utils;
 
+/**
+ * 坐标系转换唯一入口：GCJ02/WGS84/BD09 互转。全局约定：地图/历史/偏好一律 GCJ02，模拟位置写 WGS84，转换只经本类。
+ */
 public class MapUtils {
 //    public final static String COORDINATE_TYPE_GCJ02 = "gcj02";
 //    public final static String COORDINATE_TYPE_BD09LL = "bd09ll";

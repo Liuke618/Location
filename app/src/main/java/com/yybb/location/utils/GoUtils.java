@@ -22,6 +22,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * 通用静态工具：环境状态检测（开发者选项/WIFI/移动数据/GPS/模拟位置授权）、版本与应用名获取、
+ * 时间戳格式化、数值安全解析（parseDoubleOrDefault）及引导弹窗/Toast。
+ */
 public class GoUtils {
     public static boolean isDeveloperOptionsEnabled(Context context) {
         return Settings.Global.getInt(

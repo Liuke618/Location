@@ -30,6 +30,10 @@ import com.elvishew.xlog.XLog;
 import com.yybb.location.ui.map.MainActivity;
 import com.yybb.location.R;
 
+/**
+ * 模拟定位前台服务：以 100ms 周期经 TestProvider 持续供给固定位置；
+ * UI 只经 MockLocationController 接口启停与查询，禁止直接依赖 ServiceGoBinder。
+ */
 public class ServiceGo extends Service {
     // 定位相关变量
     public static final double DEFAULT_LAT = 36.667662;

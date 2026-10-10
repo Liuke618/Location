@@ -12,6 +12,9 @@ import com.elvishew.xlog.XLog;
 import com.yybb.location.utils.GoUtils;
 import com.yybb.location.R;
 
+/**
+ * 设置页（PreferenceFragmentCompat）：偏好项展示与变更监听，数值输入做格式校验（如历史记录有效期 setting_history_expiration）。
+ */
 public class FragmentSettings extends PreferenceFragmentCompat {
 
     // Set a non-empty decimal EditTextPreference

@@ -76,6 +76,10 @@ import com.yybb.location.utils.MapUtils;
 
 import com.elvishew.xlog.XLog;
 
+/**
+ * 主界面：地图选点与模拟定位的操作入口——选点/POI 搜索/逆地理经 MapController 与 PoiSearchHelper 完成，
+ * 模拟服务经 MockLocationController 启停；本类实现 MapEventListener/LocationListener/SensorEventListener 接收回调渲染。
+ */
 public class MainActivity extends BaseActivity implements SensorEventListener, MapController.MapEventListener, CurrentLocationSource.LocationListener {
     /* 对外（POI_* 键名为搜索结果 SimpleAdapter 列契约，随 getTipList 收编于 PoiSearchHelper） */
     public static final String POI_NAME = PoiSearchHelper.POI_NAME;

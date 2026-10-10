@@ -7,6 +7,10 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import com.elvishew.xlog.XLog;
 
+/**
+ * 定位历史表 HistoryLocation 的 SQLiteOpenHelper：负责建表与版本升级（当前 v2，WGS84/GCJ02 双坐标列并存）。
+ * 上层一律经 HistoryRepository 访问，不直接触碰本类。
+ */
 public class DataBaseHistoryLocation extends SQLiteOpenHelper {
     public static final String TABLE_NAME = "HistoryLocation";
     public static final String DB_COLUMN_ID = "DB_COLUMN_ID";

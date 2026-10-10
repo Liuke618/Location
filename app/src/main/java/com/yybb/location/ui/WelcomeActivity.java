@@ -37,6 +37,10 @@ import com.yybb.location.ui.map.MainActivity;
 
 import java.util.ArrayList;
 
+/**
+ * 欢迎页：承载用户协议与隐私政策的同意流程，同意结果持久化于 SharedPreferences（KEY_ACCEPT_AGREEMENT/KEY_ACCEPT_PRIVACY），
+ * 并作为高德 updatePrivacyAgree 的下发前提；同意后进入主界面。
+ */
 public class WelcomeActivity extends AppCompatActivity {
     private static SharedPreferences preferences;
     // 同意位与 GoApplication 共用同一组键:高德隐私授权在 Application 启动时按持久化结果决定是否下发

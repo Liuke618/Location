@@ -38,6 +38,9 @@ import com.yybb.location.R;
 import com.yybb.location.utils.GoUtils;
 import com.yybb.location.ui.map.MainActivity;
 
+/**
+ * 历史记录页：经 HistoryRepository 展示定位/搜索历史列表，支持单条/整表删除与过期记录清理。
+ */
 public class HistoryActivity extends BaseActivity {
     public static final String KEY_ID = "KEY_ID";
     public static final String KEY_LOCATION = "KEY_LOCATION";

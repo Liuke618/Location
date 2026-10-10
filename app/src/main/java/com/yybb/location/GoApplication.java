@@ -23,6 +23,11 @@ import com.elvishew.xlog.printer.file.naming.ChangelessFileNameGenerator;
 
 import java.io.File;
 
+/**
+ * Application 入口：初始化 XLog（单文件轮转+备份上限）、创建组合根 AppContainer、启用 Material 动态配色，
+ * 并门控高德隐私合规——三套接口（地图/定位/搜索）的 updatePrivacyShow 无条件下发，
+ * updatePrivacyAgree 仅在用户同意自有协议/隐私政策后经 applyAmapPrivacyAgreement 下发，同意位持久化于 SharedPreferences。
+ */
 public class GoApplication extends Application {
     public static final String APP_NAME = "GoGoGo";
     public static final String LOG_FILE_NAME = APP_NAME + ".log";

@@ -7,6 +7,10 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import com.elvishew.xlog.XLog;
 
+/**
+ * 搜索历史表 HistorySearch 的 SQLiteOpenHelper：记录搜索关键字与搜索结果两类条目（IS_LOCATION 区分），含双坐标列。
+ * 上层一律经 HistoryRepository 访问，不直接触碰本类。
+ */
 public class DataBaseHistorySearch extends SQLiteOpenHelper {
     public static final String TABLE_NAME = "HistorySearch";
     public static final String DB_COLUMN_ID = "DB_COLUMN_ID";
