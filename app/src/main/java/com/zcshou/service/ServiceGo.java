@@ -86,11 +86,15 @@ public class ServiceGo extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        mCurLng = intent.getDoubleExtra(ServiceGoController.LNG_MSG_ID, DEFAULT_LNG);
-        mCurLat = intent.getDoubleExtra(ServiceGoController.LAT_MSG_ID, DEFAULT_LAT);
-        mCurAlt = intent.getDoubleExtra(ServiceGoController.ALT_MSG_ID, DEFAULT_ALT);
+        // 进程被回收后系统重启服务时 Intent 为 null，原先直接解引用会 NPE 并进入"重启→崩溃"循环。
+        // 刻意返回 START_NOT_STICKY：不自动恢复模拟，避免无人知情地持续供给假定位。
+        if (intent != null) {
+            mCurLng = intent.getDoubleExtra(ServiceGoController.LNG_MSG_ID, DEFAULT_LNG);
+            mCurLat = intent.getDoubleExtra(ServiceGoController.LAT_MSG_ID, DEFAULT_LAT);
+            mCurAlt = intent.getDoubleExtra(ServiceGoController.ALT_MSG_ID, DEFAULT_ALT);
+        }
 
-        return super.onStartCommand(intent, flags, startId);
+        return START_NOT_STICKY;
     }
 
     @Override
@@ -253,12 +257,19 @@ public class ServiceGo extends Service {
     }
 
     public class ServiceGoBinder extends Binder {
-        public void setPosition(double lng, double lat, double alt) {
+        public boolean setPosition(double lng, double lat, double alt) {
+            // 缺定位权限时 onCreate 提前 return，供给循环从未建立，此时写坐标会 NPE；如实回报失败
+            if (mLocHandler == null) {
+                XLog.e("SERVICEGO: ERROR - setPosition ignored, location loop not started");
+                return false;
+            }
+
             mLocHandler.removeMessages(HANDLER_MSG_ID);
             mCurLng = lng;
             mCurLat = lat;
             mCurAlt = alt;
             mLocHandler.sendEmptyMessage(HANDLER_MSG_ID);
+            return true;
         }
     }
 }

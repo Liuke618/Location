@@ -669,7 +669,11 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
             } else {
                 double[] latLng = MapUtils.gcj02towgs84(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
                 double alt = Double.parseDouble(sharedPreferences.getString("setting_altitude", "55.0"));
-                mMockController.setPosition(latLng[0], latLng[1], alt);
+                if (!mMockController.setPosition(latLng[0], latLng[1], alt)) {
+                    // 供给循环未建立(服务尚未连上或权限缺失)，此时清标记只会让用户以为已传送
+                    GoUtils.DisplayToast(this, getResources().getString(R.string.app_error_mock_service));
+                    return;
+                }
                 Snackbar.make(v, "已传送到新位置", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
 
@@ -695,7 +699,12 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 } else {
                     double[] latLng = MapUtils.gcj02towgs84(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
                     double alt = Double.parseDouble(sharedPreferences.getString("setting_altitude", "55.0"));
-                    mMockController.start(latLng[0], latLng[1], alt);
+                    if (!mMockController.start(latLng[0], latLng[1], alt)) {
+                        // 服务没有真的起来就不改任何界面状态：落历史、清标记、换图标都会构成"已在模拟"的假象
+                        XLog.e("模拟位置服务启动失败");
+                        GoUtils.DisplayToast(this, getResources().getString(R.string.app_error_mock_service));
+                        return;
+                    }
                     //镜像模拟运行状态（MockLocationController 无回调，由调用点通知）
                     mMainViewModel.setMockRunning(true);
                     mButtonStart.setImageResource(R.drawable.ic_fly);
