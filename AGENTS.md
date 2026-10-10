@@ -48,7 +48,7 @@ com.zcshou                 # 内部代码结构(历史包名,非应用包名)
 - 高德 POI 建议的 `Tip.getPoint()` 可空——入列表前须过滤无坐标项(PoiSearchHelper 已过滤)
 - JVM 单测中 org.json 是 stub 且 json-java 的 `getString` 严格(不强转)——JSON 测试用字符串形值锚定;`testImplementation 'org.json:json'` 带 `//noinspection NewerVersionAvailable`
 - targetSdk 36 行为敏感点:前台服务三参 startForeground + `foregroundServiceType="location"`、动态 receiver 必须 NOT_EXPORTED、自发自收广播需 `setPackage`
-- 本开发机 github.com 不可达(Google 系域名可达);origin 已是自有仓库 `git@github.com:Liuke618/Location.git`(SSH),推送仍需用户确认
+- origin 是自有私有仓库 `git@github.com:Liuke618/Location.git`(SSH 推送可达;本机走 HTTPS 的 GitHub API 不通,未认证探测返回 404),推送仍需用户确认
 - 签名 keystore(`keystore/GoGoGo.jks`)与密码明文提交在 `app/build.gradle`——上游既有事实,勿外传
 
 ## 文档
