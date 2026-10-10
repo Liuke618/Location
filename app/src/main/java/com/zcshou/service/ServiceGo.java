@@ -43,7 +43,9 @@ public class ServiceGo extends Service {
     private LocationManager mLocManager;
     private HandlerThread mLocHandlerThread;
     private Handler mLocHandler;
-    private boolean isStop = false;
+    // 主线程(onDestroy)写、HandlerThread(handleMessage)读，缺 volatile 时停止标记可能永不可见，
+    // 服务已销毁却仍按 100ms 周期供给模拟位置
+    private volatile boolean isStop = false;
     // 通知栏消息
     private static final int SERVICE_GO_NOTE_ID = 1;
     private static final String SERVICE_GO_NOTE_CHANNEL_ID = "SERVICE_GO_NOTE";
@@ -186,11 +188,24 @@ public class ServiceGo extends Service {
             // minSdk 31，直接使用 ProviderProperties 参数重载，lint 不再要求 wrongconstant 抑制
             mLocManager.addTestProvider(LocationManager.GPS_PROVIDER, false, true, false,
                     false, true, true, true, ProviderProperties.POWER_USAGE_HIGH, ProviderProperties.ACCURACY_FINE);
+        } catch (SecurityException e) {
+            XLog.e("SERVICEGO: ERROR - addTestProviderGPS(无模拟位置权限)");
+            return;
+        } catch (IllegalArgumentException e) {
+            // 上一次供给没清理干净(进程被强杀)时 provider 已存在：复用现有 provider，
+            // 不能像原实现那样让异常吞掉后面的启用步骤，否则模拟位置此后永久失效
+            XLog.e("SERVICEGO: GPS test provider already registered, reuse it");
+        } catch (Exception e) {
+            XLog.e("SERVICEGO: ERROR - addTestProviderGPS");
+            return;
+        }
+
+        try {
             if (!mLocManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 mLocManager.setTestProviderEnabled(LocationManager.GPS_PROVIDER, true);
             }
         } catch (Exception e) {
-            XLog.e("SERVICEGO: ERROR - addTestProviderGPS");
+            XLog.e("SERVICEGO: ERROR - enableTestProviderGPS");
         }
     }
 
@@ -231,11 +246,23 @@ public class ServiceGo extends Service {
             mLocManager.addTestProvider(LocationManager.NETWORK_PROVIDER, true, false,
                     true, true, true, true,
                     true, ProviderProperties.POWER_USAGE_LOW, ProviderProperties.ACCURACY_COARSE);
+        } catch (SecurityException e) {
+            XLog.e("SERVICEGO: ERROR - addTestProviderNetwork(无模拟位置权限)");
+            return;
+        } catch (IllegalArgumentException e) {
+            // 原实现只捕 SecurityException，遗留 provider 触发的 IllegalArgumentException 会直接掀掉 onCreate
+            XLog.e("SERVICEGO: NETWORK test provider already registered, reuse it");
+        } catch (Exception e) {
+            XLog.e("SERVICEGO: ERROR - addTestProviderNetwork");
+            return;
+        }
+
+        try {
             if (!mLocManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 mLocManager.setTestProviderEnabled(LocationManager.NETWORK_PROVIDER, true);
             }
-        } catch (SecurityException e) {
-            XLog.e("SERVICEGO: ERROR - addTestProviderNetwork");
+        } catch (Exception e) {
+            XLog.e("SERVICEGO: ERROR - enableTestProviderNetwork");
         }
     }
 

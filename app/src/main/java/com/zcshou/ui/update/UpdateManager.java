@@ -168,6 +168,9 @@ public class UpdateManager {
     private long mDownloadId;
     private BroadcastReceiver mDownloadBdRcv;
     private String mUpdateFilename;
+    // 检测请求在 OkHttp 线程池里跑，回包时宿主 Activity 可能早已销毁：继续弹窗会抛 BadTokenException
+    private Call mPendingCall;
+    private boolean mDestroyed = false;
 
     /**
      * 下载管理器获取与下载完成接收器注册（原 initUpdateVersion 原样迁入）。
@@ -198,6 +201,10 @@ public class UpdateManager {
      * 注销下载完成接收器（原 MainActivity.onDestroy 的 unregisterReceiver 调用点，与 init 成对）。
      */
     public void destroy() {
+        mDestroyed = true;
+        if (mPendingCall != null) {
+            mPendingCall.cancel();
+        }
         mActivity.unregisterReceiver(mDownloadBdRcv);
     }
 
@@ -210,6 +217,7 @@ public class UpdateManager {
     public void checkUpdate(boolean manualToast) {
         okhttp3.Request request = new okhttp3.Request.Builder().url(RELEASE_API_URL).get().build();
         final Call call = mOkHttpClient.newCall(request);
+        mPendingCall = call;
         call.enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
@@ -223,6 +231,10 @@ public class UpdateManager {
                     String resp = responseBody.string();
                     // 注意，该请求在子线程，不能直接操作界面
                     mActivity.runOnUiThread(() -> {
+                        // 宿主已销毁时什么都不做：对话框与提示都会打到失效的窗口令牌上
+                        if (mDestroyed) {
+                            return;
+                        }
                         try {
                             final UpdateInfo info = parseRelease(resp);
                             String curVersion = GoUtils.getVersionName(mActivity);
@@ -261,7 +273,6 @@ public class UpdateManager {
                                     Button updateAgree = window.findViewById(R.id.update_agree);
                                     updateAgree.setOnClickListener(v -> {
                                         alertDialog.cancel();
-                                        GoUtils.DisplayToast(mActivity, mActivity.getResources().getString(R.string.update_downloading));
                                         download(info.downloadUrl);
                                     });
                                 }
@@ -281,9 +292,12 @@ public class UpdateManager {
 
     /**
      * 经 DownloadManager 下载新版本 APK（原 downloadNewVersion 原样迁入）。
+     * "下载中"提示改在真正入队成功后给出：下载管理器缺失或旧文件删不掉时都会静默返回，
+     * 先提示再说等于承诺了一次不会发生的下载。
      */
     public void download(String url) {
         if (mDownloadManager == null) {
+            XLog.e("UPDATE: DownloadManager 不可用, 取消下载");
             return;
         }
 
@@ -298,12 +312,14 @@ public class UpdateManager {
         File file = new File(mActivity.getExternalFilesDir("Updates"), mUpdateFilename);
         if (file.exists()) {
             if(!file.delete()) {
+                XLog.e("UPDATE: 旧安装包删除失败, 取消下载");
                 return;
             }
         }
         request.setDestinationUri(Uri.fromFile(file));
 
         mDownloadId = mDownloadManager.enqueue(request);
+        GoUtils.DisplayToast(mActivity, mActivity.getResources().getString(R.string.update_downloading));
     }
 
     /**
