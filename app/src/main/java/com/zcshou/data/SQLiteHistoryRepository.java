@@ -16,8 +16,9 @@ import java.util.Map;
 
 /**
  * HistoryRepository 的 SQLite 实现：包住既有 DataBaseHistoryLocation/DataBaseHistorySearch。
- * 读写语义与原有调用面逐字段一致：保存先删后插（去重覆盖）、ID > 0 过滤、timestamp 降序、
- * 错误吞掉仅记日志（沿用 "DATABASE: ..." 风格）。
+ * 读写语义与原有调用面逐字段一致：保存先删后插（去重覆盖）、ID > 0 过滤、timestamp 降序。
+ * 写侧异常仍只记 "DATABASE: ..." 日志，但会把成败回传给调用方——界面据此决定是否显示
+ * "已保存/删除成功"，避免存储层静默失败时对用户谎报。
  */
 public class SQLiteHistoryRepository implements HistoryRepository {
     private final DataBaseHistoryLocation mLocationDBHelper;
@@ -73,7 +74,7 @@ public class SQLiteHistoryRepository implements HistoryRepository {
     }
 
     @Override
-    public void addSearchRow(SearchRow row) {
+    public boolean addSearchRow(SearchRow row) {
         try {
             ContentValues contentValues = new ContentValues();
             contentValues.put(DataBaseHistorySearch.DB_COLUMN_KEY, row.key);
@@ -85,19 +86,22 @@ public class SQLiteHistoryRepository implements HistoryRepository {
             contentValues.put(DataBaseHistorySearch.DB_COLUMN_LONGITUDE_CUSTOM, row.lngCustom);
             contentValues.put(DataBaseHistorySearch.DB_COLUMN_LATITUDE_CUSTOM, row.latCustom);
 
-            DataBaseHistorySearch.saveHistorySearch(mSearchDB, contentValues);
+            return DataBaseHistorySearch.saveHistorySearch(mSearchDB, contentValues);
         } catch (Exception e) {
             XLog.e("DATABASE: insert error");
+            return false;
         }
     }
 
     @Override
-    public void deleteSearchRow(String key) {
+    public boolean deleteSearchRow(String key) {
         try {
             mSearchDB.delete(DataBaseHistorySearch.TABLE_NAME,
                     DataBaseHistorySearch.DB_COLUMN_KEY + " = ?", new String[]{key});
+            return true;
         } catch (Exception e) {
             XLog.e("DATABASE: delete error");
+            return false;
         }
     }
 
@@ -130,7 +134,7 @@ public class SQLiteHistoryRepository implements HistoryRepository {
     }
 
     @Override
-    public void addLocationRow(LocationRow row) {
+    public boolean addLocationRow(LocationRow row) {
         try {
             ContentValues contentValues = new ContentValues();
             contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LOCATION, row.location);
@@ -140,44 +144,56 @@ public class SQLiteHistoryRepository implements HistoryRepository {
             contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LONGITUDE_CUSTOM, row.lngCustom);
             contentValues.put(DataBaseHistoryLocation.DB_COLUMN_LATITUDE_CUSTOM, row.latCustom);
 
-            DataBaseHistoryLocation.saveHistoryLocation(mLocationDB, contentValues);
+            return DataBaseHistoryLocation.saveHistoryLocation(mLocationDB, contentValues);
         } catch (Exception e) {
             XLog.e("DATABASE: insert error");
+            return false;
         }
     }
 
     @Override
-    public void clearExpiredLocationRows(long cutoffEpochSeconds) {
+    public boolean clearExpiredLocationRows(long cutoffEpochSeconds) {
         try {
             mLocationDB.delete(DataBaseHistoryLocation.TABLE_NAME,
                     DataBaseHistoryLocation.DB_COLUMN_TIMESTAMP + " < ?",
                     new String[]{Long.toString(cutoffEpochSeconds)});
+            return true;
         } catch (Exception e) {
             XLog.e("DATABASE: delete error");
+            return false;
         }
     }
 
     @Override
-    public void clearAllLocationRows() {
+    public boolean clearAllLocationRows() {
         try {
             mLocationDB.delete(DataBaseHistoryLocation.TABLE_NAME, null, null);
+            return true;
         } catch (Exception e) {
             XLog.e("DATABASE: delete error");
+            return false;
         }
     }
 
     @Override
-    public void deleteLocationRow(int id) {
+    public boolean deleteLocationRow(int id) {
         try {
             mLocationDB.delete(DataBaseHistoryLocation.TABLE_NAME,
                     DataBaseHistoryLocation.DB_COLUMN_ID + " = ?", new String[]{Integer.toString(id)});
+            return true;
         } catch (Exception e) {
             XLog.e("DATABASE: delete error");
+            return false;
         }
     }
 
     @Override
-    public void renameLocationRow(int id, String newName) {
-        DataBaseHistoryLocation.updateHistoryLocation(mLocationDB, Integer.toString(id), newName);
+    public boolean renameLocationRow(int id, String newName) {
+        try {
+            return DataBaseHistoryLocation.updateHistoryLocation(mLocationDB, Integer.toString(id), newName);
+        } catch (Exception e) {
+            XLog.e("DATABASE: update error");
+            return false;
+        }
     }
 }

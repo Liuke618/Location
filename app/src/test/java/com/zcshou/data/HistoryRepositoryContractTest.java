@@ -1,6 +1,7 @@
 package com.zcshou.data;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.zcshou.data.HistoryRepository.LocationRow;
@@ -178,5 +179,26 @@ public class HistoryRepositoryContractTest {
         assertEquals(1, rows.size());
         assertEquals("改名后", rows.get(0).location);
         assertEquals(100L, rows.get(0).timestamp); // 其余字段不变
+    }
+
+    @Test
+    public void renameLocationRow_unknownId_reportsFailure() {
+        mRepository.addLocationRow(new LocationRow("A", "1.0", "1.0", 100L, "1.0", "1.0"));
+
+        // 目标行不存在 = 存储层没改动任何行，界面要能据此提示失败而不是谎报改名成功
+        assertFalse(mRepository.renameLocationRow(9999, "不存在"));
+    }
+
+    /*============================== 写侧成败回传（界面提示的依据） ==============================*/
+
+    @Test
+    public void writeMethods_reportSuccess_whenStorageAcceptedThem() {
+        assertTrue(mRepository.addSearchRow(new SearchRow("k1", "d1", 0, null, null, null, null, 100L)));
+        assertTrue(mRepository.addLocationRow(new LocationRow("A", "1.0", "1.0", 100L, "1.0", "1.0")));
+        assertTrue(mRepository.renameLocationRow(1, "改名后"));
+        assertTrue(mRepository.clearExpiredLocationRows(50L));
+        assertTrue(mRepository.deleteLocationRow(1));
+        assertTrue(mRepository.clearAllLocationRows());
+        assertTrue(mRepository.deleteSearchRow("k1"));
     }
 }

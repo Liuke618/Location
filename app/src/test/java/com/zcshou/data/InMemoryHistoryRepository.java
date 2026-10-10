@@ -39,14 +39,16 @@ public class InMemoryHistoryRepository implements HistoryRepository {
     }
 
     @Override
-    public void addSearchRow(SearchRow row) {
+    public boolean addSearchRow(SearchRow row) {
         mSearchRowsByKey.remove(row.key); // 同 key 先删后插
         mSearchRowsByKey.put(row.key, row);
+        return true;
     }
 
     @Override
-    public void deleteSearchRow(String key) {
+    public boolean deleteSearchRow(String key) {
         mSearchRowsByKey.remove(key);
+        return true;
     }
 
     @Override
@@ -60,37 +62,43 @@ public class InMemoryHistoryRepository implements HistoryRepository {
     }
 
     @Override
-    public void addLocationRow(LocationRow row) {
+    public boolean addLocationRow(LocationRow row) {
         mLocationRows.removeIf(r -> Objects.equals(r.lngWgs, row.lngWgs)
                 && Objects.equals(r.latWgs, row.latWgs)); // 同 WGS84 经纬度先删后插
         mLocationRows.add(new LocationRow(mNextLocationId++, row.location, row.lngWgs,
                 row.latWgs, row.timestamp, row.lngCustom, row.latCustom));
+        return true;
     }
 
     @Override
-    public void clearExpiredLocationRows(long cutoffEpochSeconds) {
+    public boolean clearExpiredLocationRows(long cutoffEpochSeconds) {
         mLocationRows.removeIf(r -> r.timestamp < cutoffEpochSeconds);
+        return true;
     }
 
     @Override
-    public void clearAllLocationRows() {
+    public boolean clearAllLocationRows() {
         mLocationRows.clear();
+        return true;
     }
 
     @Override
-    public void deleteLocationRow(int id) {
+    public boolean deleteLocationRow(int id) {
         mLocationRows.removeIf(r -> r.id == id);
+        return true;
     }
 
     @Override
-    public void renameLocationRow(int id, String newName) {
+    public boolean renameLocationRow(int id, String newName) {
         for (int i = 0; i < mLocationRows.size(); i++) {
             LocationRow row = mLocationRows.get(i);
             if (row.id == id) {
                 mLocationRows.set(i, new LocationRow(row.id, newName, row.lngWgs,
                         row.latWgs, row.timestamp, row.lngCustom, row.latCustom));
-                return;
+                return true;
             }
         }
+        // 与 SQLite 实现的 update 影响行数语义一致：目标行不存在即失败
+        return false;
     }
 }

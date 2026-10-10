@@ -43,7 +43,7 @@ public class DataBaseHistoryLocation extends SQLiteOpenHelper {
     }
 
     // 保存选择的位置
-    public static void saveHistoryLocation(SQLiteDatabase sqLiteDatabase, ContentValues contentValues) {
+    public static boolean saveHistoryLocation(SQLiteDatabase sqLiteDatabase, ContentValues contentValues) {
         try {
             // 先删除原来的记录，再插入新记录
             String longitudeWgs84 = contentValues.getAsString(DB_COLUMN_LONGITUDE_WGS84);
@@ -52,20 +52,22 @@ public class DataBaseHistoryLocation extends SQLiteOpenHelper {
                             DB_COLUMN_LONGITUDE_WGS84 + " = ? AND " +
                             DB_COLUMN_LATITUDE_WGS84 + " = ?",
                     new String[] {longitudeWgs84, latitudeWgs84});
-            sqLiteDatabase.insert(TABLE_NAME, null, contentValues);
+            return sqLiteDatabase.insert(TABLE_NAME, null, contentValues) != -1;
         } catch (Exception e) {
             XLog.e("DATABASE: insert error");
+            return false;
         }
     }
 
     // 修改历史记录名称
-    public static void updateHistoryLocation(SQLiteDatabase sqLiteDatabase, String locID, String location) {
+    public static boolean updateHistoryLocation(SQLiteDatabase sqLiteDatabase, String locID, String location) {
         try{
             ContentValues contentValues = new ContentValues();
             contentValues.put(DB_COLUMN_LOCATION, location);
-            sqLiteDatabase.update(TABLE_NAME, contentValues, DB_COLUMN_ID + " = ?", new String[]{locID});
+            return sqLiteDatabase.update(TABLE_NAME, contentValues, DB_COLUMN_ID + " = ?", new String[]{locID}) > 0;
         } catch (Exception e){
             XLog.e("DATABASE: update error");
+            return false;
         }
     }
 }

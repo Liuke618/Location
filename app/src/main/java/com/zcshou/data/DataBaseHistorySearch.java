@@ -49,14 +49,15 @@ public class DataBaseHistorySearch extends SQLiteOpenHelper {
         }
     }
 
-    public static void saveHistorySearch(SQLiteDatabase sqLiteDatabase, ContentValues contentValues) {
+    public static boolean saveHistorySearch(SQLiteDatabase sqLiteDatabase, ContentValues contentValues) {
         try {
             // 先删除原来的记录，再插入新记录
             String searchKey = contentValues.get(DataBaseHistorySearch.DB_COLUMN_KEY).toString();
             sqLiteDatabase.delete(DataBaseHistorySearch.TABLE_NAME, DataBaseHistorySearch.DB_COLUMN_KEY + " = ?", new String[] {searchKey});
-            sqLiteDatabase.insert(DataBaseHistorySearch.TABLE_NAME, null, contentValues);
+            return sqLiteDatabase.insert(DataBaseHistorySearch.TABLE_NAME, null, contentValues) != -1;
         } catch (Exception e) {
             XLog.e("DATABASE: insert error");
+            return false;
         }
     }
 }

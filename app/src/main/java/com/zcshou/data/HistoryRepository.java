@@ -29,10 +29,10 @@ public interface HistoryRepository {
     List<Map<String, Object>> getSearchRows();
 
     /** 保存搜索历史行（同 key 先删后插，去重覆盖语义） */
-    void addSearchRow(SearchRow row);
+    boolean addSearchRow(SearchRow row);
 
     /** 删除指定 key 的搜索历史行 */
-    void deleteSearchRow(String key);
+    boolean deleteSearchRow(String key);
 
     /*============================== 定位历史 ==============================*/
 
@@ -40,19 +40,19 @@ public interface HistoryRepository {
     List<LocationRow> getLocationRows();
 
     /** 保存定位历史行（同 WGS84 经纬度先删后插，去重覆盖语义；id 由存储层自增分配） */
-    void addLocationRow(LocationRow row);
+    boolean addLocationRow(LocationRow row);
 
     /** 删除时间早于 cutoffEpochSeconds 的定位历史行 */
-    void clearExpiredLocationRows(long cutoffEpochSeconds);
+    boolean clearExpiredLocationRows(long cutoffEpochSeconds);
 
     /** 删除全部定位历史行 */
-    void clearAllLocationRows();
+    boolean clearAllLocationRows();
 
     /** 删除指定 id 的定位历史行 */
-    void deleteLocationRow(int id);
+    boolean deleteLocationRow(int id);
 
     /** 修改指定 id 的定位历史行名称 */
-    void renameLocationRow(int id, String newName);
+    boolean renameLocationRow(int id, String newName);
 
     /** 搜索历史行值对象（字段与 DataBaseHistorySearch 表列一一对应） */
     class SearchRow {
