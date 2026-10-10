@@ -17,6 +17,15 @@ if (amapApiKey.isEmpty()) {
 // 装上的是另一个应用而非升级。默认指本 fork,可经 local.properties 或 CI 注入 UPDATE_REPO_SLUG 覆盖
 def updateRepoSlug = localProps.getProperty('UPDATE_REPO_SLUG', 'Liuke618/Location')
 
+// 签名凭据从 local.properties 读取(该文件 gitignored)，不再明文写在本文件里;CI 由 secrets 写入同名键
+def signKeyAlias = localProps.getProperty('KEY_ALIAS', '')
+def signKeyStorePassword = localProps.getProperty('KEY_STORE_PASSWORD', '')
+def signKeyPassword = localProps.getProperty('KEY_PASSWORD', '')
+if (signKeyAlias.isEmpty() || signKeyStorePassword.isEmpty() || signKeyPassword.isEmpty()) {
+    logger.warn('local.properties 缺少签名凭据(KEY_ALIAS/KEY_STORE_PASSWORD/KEY_PASSWORD),'
+            + 'assembleDebug/assembleRelease 会在签名阶段失败;CI 由 secrets 注入同名键')
+}
+
 android {
     // GradleDependency：SDK 37 已可用；compileSdk 升级需连动 AGP 兼容性评估，属行为变更，本分支锁定 36（分支既定决策）
     //noinspection GradleDependency
@@ -25,16 +34,16 @@ android {
 
     signingConfigs {
         debug {
-            storeFile file('../keystore/GoGoGo.jks')
-            storePassword 'GoGoGo'
-            keyAlias 'GoGoKey'
-            keyPassword 'GoGoGo'
+            storeFile file('../keystore/Location.jks')
+            storePassword signKeyStorePassword
+            keyAlias signKeyAlias
+            keyPassword signKeyPassword
         }
         release {
-            storeFile file('../keystore/GoGoGo.jks')
-            storePassword 'GoGoGo'
-            keyAlias 'GoGoKey'
-            keyPassword 'GoGoGo'
+            storeFile file('../keystore/Location.jks')
+            storePassword signKeyStorePassword
+            keyAlias signKeyAlias
+            keyPassword signKeyPassword
         }
     }
 

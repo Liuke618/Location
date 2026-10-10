@@ -10,7 +10,7 @@ GoGoGo(影梭)——Android 免 Root 虚拟定位 App(GPL-3.0,仅 arm64-v8a),基
 
 - 工具链:AGP 9.4.1 / Gradle 9.8 / JDK 17 / minSdk 31 / targetSdk 36,纯 Java 单模块 `:app`
 - `gradlew` 无执行位——用 `sh gradlew ...`,**不要 chmod**(会弄脏 index)
-- 本地构建需 `local.properties`(gitignored):`sdk.dir` + `AMAP_API_KEY`(键缺失可构建,值为空串;运行时地图不初始化)。CI 由 workflow 注入同名键,键名不可改
+- 本地构建需 `local.properties`(gitignored):`sdk.dir` + `AMAP_API_KEY`(键缺失可构建,值为空串;运行时地图不初始化)+ 签名凭据 `KEY_ALIAS`/`KEY_STORE_PASSWORD`/`KEY_PASSWORD`(缺失则 assemble 在签名阶段失败)。CI 由 workflow 注入同名键,键名不可改
 - 坐标系约定:**地图/历史/偏好一律 GCJ02,模拟位置写 WGS84,坐标系转换只经 `MapUtils`**
 - 常用:`sh gradlew assembleDebug test lint`;全量验证:`sh gradlew clean assembleDebug assembleRelease test lint`(四项全绿是合入门槛)
 - lint 标准 0 error 0 warning(`app/lint-baseline.xml` 仅 2 条 IconLocation 豁免);任何新增 `@SuppressLint`/`tools:ignore`/`noinspection` 必须带理由注释
@@ -49,7 +49,7 @@ com.zcshou                 # 内部代码结构(历史包名,非应用包名)
 - JVM 单测中 org.json 是 stub 且 json-java 的 `getString` 严格(不强转)——JSON 测试用字符串形值锚定;`testImplementation 'org.json:json'` 带 `//noinspection NewerVersionAvailable`
 - targetSdk 36 行为敏感点:前台服务三参 startForeground + `foregroundServiceType="location"`、动态 receiver 必须 NOT_EXPORTED、自发自收广播需 `setPackage`
 - origin 是自有私有仓库 `git@github.com:Liuke618/Location.git`(SSH 推送可达;本机走 HTTPS 的 GitHub API 不通,未认证探测返回 404),推送仍需用户确认
-- 签名 keystore(`keystore/GoGoGo.jks`)与密码明文提交在 `app/build.gradle`——上游既有事实,勿外传
+- 签名 keystore:`keystore/Location.jks`(PKCS12,别名 `locationkey`,DN `CN=Liuke618, O=Liuke618, C=CN`,SHA1 `D3:67:71:54:6A:52:21:AA:00:3A:BA:E6:D7:81:46:BB:60:AC:98:5B`)。2026-10-10 重签自上游证书(SHA1 `32:2F:E6:05:…:45:D2`,已删,仅存 git 历史)——**新旧签名不兼容,已装机用户须卸载重装**;口令不再入库(`KEY_ALIAS`/`KEY_STORE_PASSWORD`/`KEY_PASSWORD` 读自 local.properties;PKCS12 不区分 store 与 key 口令,两键必须同值,否则 `packageDebug/packageRelease` 报 "Given final block not properly padded" 且构建不拦原因);CI 最终签名以 `secrets.SIGNING_KEY` 为准,换证书后必须同步该 secret 与上面三个键,否则本地与 CI 是两个签名身份,而高德 key 绑的是 APK 实际那张证书的 SHA1
 
 ## 文档
 

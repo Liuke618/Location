@@ -29,11 +29,14 @@ jobs:
         id: var
         run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
 
-      # 创建 local.properties 文件
+      # 创建 local.properties 文件：高德 key 与签名凭据一律由 secrets 注入，不再入库
       - name: Create local.properties
         run: |
           cat << EOF > local.properties
           AMAP_API_KEY=${{ secrets.AMAP_API_KEY }}
+          KEY_ALIAS=${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD=${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
           EOF
 
       - name: Build APK
