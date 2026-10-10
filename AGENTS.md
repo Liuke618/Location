@@ -43,12 +43,12 @@ com.zcshou                 # 内部代码结构(历史包名,非应用包名)
 ## 已知坑
 
 - 高德 key 绑定包名 com.yybb.location + 签名 SHA1(key 无效 = 地图空白/定位搜索报错,构建不拦)
-- 高德隐私合规三套接口(地图 MapsInitializer / 定位 AMapLocationClient / 搜索 ServiceSettings)**各自独立、必须都调**,漏调对应能力运行时报错(搜索=1907)且构建不拦
+- 高德隐私合规三套接口(地图 MapsInitializer / 定位 AMapLocationClient / 搜索 ServiceSettings)**各自独立、三套都要调**，漏调对应能力运行时报错(搜索=1907)且构建不拦；`updatePrivacyShow` 无条件调用，`updatePrivacyAgree` **只能在用户同意自有协议/隐私政策之后下发**(经 `GoApplication.applyAmapPrivacyAgreement`，同意位持久化在 SharedPreferences 键 `KEY_ACCEPT_AGREEMENT`/`KEY_ACCEPT_PRIVACY`)——把它改回无条件调用等于替用户点头，隐私声明与实际行为不符
 - 高德自定义 InfoWindow 窗体以位图渲染、**不向子 View 派发触摸事件**——长按地址气泡的保存/复制/分享/传送四按钮能否点击需真机验证(发布阻断冒烟项);失效则需改整窗 OnInfoWindowClickListener+对话框方案
 - 高德 POI 建议的 `Tip.getPoint()` 可空——入列表前须过滤无坐标项(PoiSearchHelper 已过滤)
 - JVM 单测中 org.json 是 stub 且 json-java 的 `getString` 严格(不强转)——JSON 测试用字符串形值锚定;`testImplementation 'org.json:json'` 带 `//noinspection NewerVersionAvailable`
 - targetSdk 36 行为敏感点:前台服务三参 startForeground + `foregroundServiceType="location"`、动态 receiver 必须 NOT_EXPORTED、自发自收广播需 `setPackage`
-- 本开发机 github.com 不可达(Google 系域名可达);origin 指向上游 ZCShou/GoGoGo(无推送权限),master 领先 origin 41 个提交未推送
+- 本开发机 github.com 不可达(Google 系域名可达);origin 已是自有仓库 `git@github.com:Liuke618/Location.git`(SSH),推送仍需用户确认
 - 签名 keystore(`keystore/GoGoGo.jks`)与密码明文提交在 `app/build.gradle`——上游既有事实,勿外传
 
 ## 文档

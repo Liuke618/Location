@@ -221,72 +221,102 @@ public class UpdateManager {
         call.enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                XLog.i("更新检测失败");
+                // destroy() 会取消在途请求，主动取消不算检测失败
+                if (call.isCanceled()) {
+                    return;
+                }
+                reportCheckFailure("network: " + e, manualToast);
             }
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull okhttp3.Response response) throws IOException {
                 ResponseBody responseBody = response.body();
-                if (responseBody != null) {
-                    String resp = responseBody.string();
-                    // 注意，该请求在子线程，不能直接操作界面
-                    mActivity.runOnUiThread(() -> {
-                        // 宿主已销毁时什么都不做：对话框与提示都会打到失效的窗口令牌上
-                        if (mDestroyed) {
-                            return;
-                        }
-                        try {
-                            final UpdateInfo info = parseRelease(resp);
-                            String curVersion = GoUtils.getVersionName(mActivity);
-
-                            boolean isNewer = compareVersionNames(info.tagName, curVersion) > 0;
-                            boolean sameSource = isTrustedDownloadUrl(info.downloadUrl, BuildConfig.UPDATE_REPO_SLUG);
-
-                            if (isNewer && sameSource) {
-                                final android.app.AlertDialog alertDialog = new android.app.AlertDialog.Builder(mActivity).create();
-                                alertDialog.show();
-                                alertDialog.setCancelable(false);
-                                Window window = alertDialog.getWindow();
-                                if (window != null) {
-                                    window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);      // 防止出现闪屏
-                                    window.setContentView(R.layout.update);
-                                    window.setGravity(Gravity.CENTER);
-                                    window.setWindowAnimations(R.style.DialogAnimFadeInFadeOut);
-
-                                    TextView updateTitle = window.findViewById(R.id.update_title);
-                                    updateTitle.setText(info.name);
-                                    TextView updateTime = window.findViewById(R.id.update_time);
-                                    updateTime.setText(info.createdAt);
-                                    TextView updateCommit = window.findViewById(R.id.update_commit);
-                                    updateCommit.setText(info.commitish);
-
-                                    TextView updateContent = window.findViewById(R.id.update_content);
-                                    final Markwon markwon = Markwon.create(mActivity);
-                                    markwon.setMarkdown(updateContent, info.body);
-
-                                    Button updateCancel = window.findViewById(R.id.update_ignore);
-                                    updateCancel.setOnClickListener(v -> alertDialog.cancel());
-
-                                    /* 这里用来保存下载地址 */
-                                    mUpdateFilename = info.filename;
-
-                                    Button updateAgree = window.findViewById(R.id.update_agree);
-                                    updateAgree.setOnClickListener(v -> {
-                                        alertDialog.cancel();
-                                        download(info.downloadUrl);
-                                    });
-                                }
-                            } else {
-                                if (manualToast) {
-                                    GoUtils.DisplayToast(mActivity, mActivity.getResources().getString(R.string.update_last));
-                                }
-                            }
-                        } catch (JSONException e) {
-                            XLog.e("ERROR: resolve json");
-                        }
-                    });
+                if (responseBody == null) {
+                    reportCheckFailure("empty body", manualToast);
+                    return;
                 }
+                String resp = responseBody.string();
+                if (!response.isSuccessful()) {
+                    // 403/429 多为 GitHub 未认证 API 限流，响应体不是 release JSON；
+                    // 原先把这段文本直接丢给 JSON 解析，失败后只留一行日志，用户看不出区别
+                    reportCheckFailure("http " + response.code(), manualToast);
+                    return;
+                }
+                // 注意，该请求在子线程，不能直接操作界面
+                mActivity.runOnUiThread(() -> {
+                    // 宿主已销毁时什么都不做：对话框与提示都会打到失效的窗口令牌上
+                    if (mDestroyed) {
+                        return;
+                    }
+                    try {
+                        final UpdateInfo info = parseRelease(resp);
+                        String curVersion = GoUtils.getVersionName(mActivity);
+
+                        boolean isNewer = compareVersionNames(info.tagName, curVersion) > 0;
+                        boolean sameSource = isTrustedDownloadUrl(info.downloadUrl, BuildConfig.UPDATE_REPO_SLUG);
+
+                        if (isNewer && sameSource) {
+                            final android.app.AlertDialog alertDialog = new android.app.AlertDialog.Builder(mActivity).create();
+                            alertDialog.show();
+                            alertDialog.setCancelable(false);
+                            Window window = alertDialog.getWindow();
+                            if (window != null) {
+                                window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);      // 防止出现闪屏
+                                window.setContentView(R.layout.update);
+                                window.setGravity(Gravity.CENTER);
+                                window.setWindowAnimations(R.style.DialogAnimFadeInFadeOut);
+
+                                TextView updateTitle = window.findViewById(R.id.update_title);
+                                updateTitle.setText(info.name);
+                                TextView updateTime = window.findViewById(R.id.update_time);
+                                updateTime.setText(info.createdAt);
+                                TextView updateCommit = window.findViewById(R.id.update_commit);
+                                updateCommit.setText(info.commitish);
+
+                                TextView updateContent = window.findViewById(R.id.update_content);
+                                final Markwon markwon = Markwon.create(mActivity);
+                                markwon.setMarkdown(updateContent, info.body);
+
+                                Button updateCancel = window.findViewById(R.id.update_ignore);
+                                updateCancel.setOnClickListener(v -> alertDialog.cancel());
+
+                                /* 这里用来保存下载地址 */
+                                mUpdateFilename = info.filename;
+
+                                Button updateAgree = window.findViewById(R.id.update_agree);
+                                updateAgree.setOnClickListener(v -> {
+                                    alertDialog.cancel();
+                                    download(info.downloadUrl);
+                                });
+                            }
+                        } else {
+                            if (manualToast) {
+                                GoUtils.DisplayToast(mActivity, mActivity.getResources().getString(R.string.update_last));
+                            }
+                        }
+                    } catch (JSONException e) {
+                        reportCheckFailure("unexpected payload: " + e, manualToast);
+                    }
+                });
             }
+        });
+    }
+
+    /**
+     * 检测失败统一收口：日志始终记录原因；仅手动检测（侧边栏"检查更新"）才打扰界面，
+     * 自动检测保持静默，与原行为一致。
+     */
+    private void reportCheckFailure(String reason, boolean manualToast) {
+        XLog.e("UPDATE: 更新检测失败 " + reason);
+        if (!manualToast) {
+            return;
+        }
+        mActivity.runOnUiThread(() -> {
+            // 宿主已销毁时提示同样打不出去：回调可能晚于 Activity 生命周期
+            if (mDestroyed) {
+                return;
+            }
+            GoUtils.DisplayToast(mActivity, mActivity.getResources().getString(R.string.update_check_failed));
         });
     }
 

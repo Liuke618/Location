@@ -387,8 +387,13 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
             } else if (id == R.id.nav_update) {
                 mUpdateManager.checkUpdate(true);
             } else if (id == R.id.nav_feedback) {
-                File file = new File(getExternalFilesDir("Logs"), GoApplication.LOG_FILE_NAME);
-                ShareUtils.shareFile(this, file, item.getTitle().toString());
+                // 关闭日志或尚未落盘时文件不存在,直接把缺失文件交给 FileProvider 会抛异常,先给可读提示
+                File logFile = new File(getExternalFilesDir("Logs"), GoApplication.LOG_FILE_NAME);
+                if (!logFile.exists()) {
+                    GoUtils.DisplayToast(this, getResources().getString(R.string.app_error_log_missing));
+                } else {
+                    ShareUtils.shareFile(this, logFile, item.getTitle().toString());
+                }
             } else if (id == R.id.nav_contact) {
                 Uri uri = Uri.parse("https://gitee.com/itexp/gogogo/issues");
                 Intent intent = new Intent(Intent.ACTION_VIEW, uri);

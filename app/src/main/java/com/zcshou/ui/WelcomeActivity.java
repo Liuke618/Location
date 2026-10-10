@@ -31,6 +31,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.preference.PreferenceManager;
 
 import com.zcshou.utils.GoUtils;
+import com.yybb.location.GoApplication;
 import com.yybb.location.R;
 import com.zcshou.ui.map.MainActivity;
 
@@ -38,8 +39,9 @@ import java.util.ArrayList;
 
 public class WelcomeActivity extends AppCompatActivity {
     private static SharedPreferences preferences;
-    private static final String KEY_ACCEPT_AGREEMENT = "KEY_ACCEPT_AGREEMENT";
-    private static final String KEY_ACCEPT_PRIVACY = "KEY_ACCEPT_PRIVACY";
+    // 同意位与 GoApplication 共用同一组键:高德隐私授权在 Application 启动时按持久化结果决定是否下发
+    private static final String KEY_ACCEPT_AGREEMENT = GoApplication.KEY_ACCEPT_AGREEMENT;
+    private static final String KEY_ACCEPT_PRIVACY = GoApplication.KEY_ACCEPT_PRIVACY;
 
     private static boolean isPermission = false;
     private static final int SDK_PERMISSION_REQUEST = 127;
@@ -187,6 +189,10 @@ public class WelcomeActivity extends AppCompatActivity {
         editor.putBoolean(KEY_ACCEPT_PRIVACY, mPrivacy);
         //提交修改
         editor.apply();
+        // 同意位落盘后立即把隐私授权下发给高德 SDK(进程首启时此处尚未同意,Application 只做了 Show 不做 Agree)
+        if (mAgreement && mPrivacy) {
+            GoApplication.applyAmapPrivacyAgreement(this);
+        }
     }
 
     // 勾选复选框但尚未同意完时,依序弹出协议、隐私弹窗

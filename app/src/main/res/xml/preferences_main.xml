@@ -46,6 +46,7 @@
         <SwitchPreferenceCompat
             app:key="setting_log_off"
             app:title="@string/setting_log_off"
+            app:summary="@string/setting_log_off_summary"
             app:defaultValue="false"
             app:iconSpaceReserved="false"/>
         <EditTextPreference
