@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ 的备份/设备间迁移规则(API 31 起 minSdk 覆盖全部取值)。
+  本应用数据含定位历史库、搜索历史库与偏好(选中点/上次模拟位置)，属敏感位置数据，
+  与 allowBackup="false" 同向：云端备份与恢复出厂后的迁移都不得带走任何一份。
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

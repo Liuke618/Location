@@ -2,8 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Android Q 新增的权限。允许用户授予对两个不同范围的位置访问权限：在使用中（仅限前景）或始终（前景和后台） -->
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- 定位权限只用于前台选点与模拟，代码中无后台定位场景，不声明 ACCESS_BACKGROUND_LOCATION -->
     <!-- 允许一个程序访问CellID或WiFi热点来获取粗略的位置 -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- 通过GPS得到精确位置 -->
@@ -19,27 +18,24 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <!-- Android 13+ 通知运行时权限 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
-    <!-- ScopedStorage：targetSdk 33+ 不再授予该权限，暂保留待用户请示（见设计文档 Task 15）后再移除 -->
-    <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE"
-        tools:ignore="ScopedStorage" />
 
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
 
     <!-- 允许程序打开网络套接字 -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- 允许访问振动设备 -->
-    <uses-permission android:name="android.permission.VIBRATE" />
-    <!-- 允许使用PowerManager的 WakeLocks保持进程在休眠时从屏幕消失 -->
+    <!-- 高德定位 SDK 连续定位靠 WakeLock 保持 CPU 唤醒，代码虽不直接使用但需保留 -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- 允许程序创建模拟位置提供用于测试 -->
     <uses-permission
         android:name="android.permission.ACCESS_MOCK_LOCATION"
         tools:ignore="MockLocation,ProtectedPermissions" />
 
+    <!-- 位置历史/搜索历史/偏好属敏感位置数据:allowBackup=false 关掉系统备份总开关，
+         dataExtractionRules 再把云端备份与设备间迁移的白名单清空(两道都留是 lint 要求，也是意图声明) -->
     <application
         android:name=".GoApplication"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:launchMode="singleInstance"
@@ -82,9 +78,13 @@
             </intent-filter>
         </activity>
 
+        <!-- 旋转屏不再重建本界面:原重建会走 onDestroy → mMockController.stop()，用户转个屏就被静默
+             停止模拟。项目无 layout-land/values-land 等横屏专用资源，声明 configChanges 就地处理不会
+             丢失差异化布局；主题(uiMode)刻意不声明，深色模式切换仍按常规重建生效 -->
         <activity
             android:name="com.zcshou.ui.map.MainActivity"
             android:launchMode="singleInstance"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar" />
 

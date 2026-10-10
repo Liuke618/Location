@@ -102,8 +102,9 @@ public class WelcomeActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == SDK_PERMISSION_REQUEST) {
-            for (int i = 0; i < ReqPermissions.size(); i++) {
-                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
+            // 以 grantResults 长度为界：结果数组与申请列表在系统侧改写时不会互相错位越界
+            for (int result : grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
                     GoUtils.DisplayToast(this, getResources().getString(R.string.app_error_permission));
                     return;
                 }
@@ -115,6 +116,9 @@ public class WelcomeActivity extends AppCompatActivity {
     }
 
     private void checkDefaultPermissions() {
+        // 静态列表跨 Activity 实例复用，重复点按"进入应用"会累积旧项，先清空再按当前授权状态收集
+        ReqPermissions.clear();
+
         // 定位精确位置
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ReqPermissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
@@ -124,21 +128,8 @@ public class WelcomeActivity extends AppCompatActivity {
             ReqPermissions.add(Manifest.permission.ACCESS_COARSE_LOCATION);
         }
 
-        /*
-         * 读写权限和电话状态权限非必要权限(建议授予)只会申请一次，用户同意或者禁止，只会弹一次
-         */
-        // 读写权限
-        // Android 13+ 起 READ_EXTERNAL_STORAGE 被系统自动拒绝，申请会阻塞主流程
-        if (Build.VERSION.SDK_INT < 33
-                && checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ReqPermissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
-        }
-
-        // 读取电话状态权限
-        if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-            ReqPermissions.add(Manifest.permission.READ_PHONE_STATE);
-        }
-
+        // 电话状态与外部存储读取都不是本应用功能所需(日志文件在应用私有目录，分享走 FileProvider)，
+        // 原先一并申请会多弹一次危险权限框，且用户拒绝后 isPermission 永远为假、无法进入主界面
         if (ReqPermissions.isEmpty()) {
             isPermission = true;
             checkNotificationPermission();
