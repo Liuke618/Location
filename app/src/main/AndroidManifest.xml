@@ -50,7 +50,7 @@
         <service
             android:exported="false"
             android:foregroundServiceType="location"
-            android:name="com.zcshou.service.ServiceGo" />
+            android:name="com.yybb.location.service.ServiceGo" />
 
         <!-- 高德开放平台 key(经 manifestPlaceholder 注入,绑定包名 com.yybb.location + 签名 SHA1) -->
         <meta-data
@@ -68,7 +68,7 @@
         </provider>
 
         <activity
-            android:name="com.zcshou.ui.WelcomeActivity"
+            android:name="com.yybb.location.ui.WelcomeActivity"
             android:exported="true"
             android:theme="@style/AppTheme.NoActionBar"
             >
@@ -82,19 +82,19 @@
              停止模拟。项目无 layout-land/values-land 等横屏专用资源，声明 configChanges 就地处理不会
              丢失差异化布局；主题(uiMode)刻意不声明，深色模式切换仍按常规重建生效 -->
         <activity
-            android:name="com.zcshou.ui.map.MainActivity"
+            android:name="com.yybb.location.ui.map.MainActivity"
             android:launchMode="singleInstance"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar" />
 
         <activity
-            android:name="com.zcshou.ui.settings.SettingsActivity"
+            android:name="com.yybb.location.ui.settings.SettingsActivity"
             android:label="@string/app_settings"
             android:exported="false" />
 
         <activity
-            android:name="com.zcshou.ui.history.HistoryActivity"
+            android:name="com.yybb.location.ui.history.HistoryActivity"
             android:label="@string/app_history"
             android:exported="false" />
 

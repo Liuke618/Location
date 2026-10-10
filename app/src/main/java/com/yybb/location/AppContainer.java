@@ -2,9 +2,9 @@ package com.yybb.location;
 
 import android.content.Context;
 
-import com.zcshou.data.HistoryRepository;
-import com.zcshou.data.SQLiteHistoryRepository;
-import com.zcshou.ui.map.MapState;
+import com.yybb.location.data.HistoryRepository;
+import com.yybb.location.data.SQLiteHistoryRepository;
+import com.yybb.location.ui.map.MapState;
 
 /**
  * 应用级依赖容器：惰性创建跨页面共享的单例依赖。

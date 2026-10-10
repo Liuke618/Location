@@ -19,8 +19,7 @@ GoGoGo(影梭)——Android 免 Root 虚拟定位 App(GPL-3.0,仅 arm64-v8a),基
 
 ```
 com.yybb.location          # 应用包名(applicationId/namespace)
-└── (根包)                 # GoApplication、BaseActivity、AppContainer(组合根,手工 DI)
-com.zcshou                 # 内部代码结构(历史包名,非应用包名)
+├── (根包)                 # GoApplication、BaseActivity、AppContainer(组合根,手工 DI)
 ├── ui.map      # MainActivity、MainViewModel、MapState、MapController、GeocoderHelper
 ├── ui.search|location|update|settings|history、ui.WelcomeActivity
 ├── data        # HistoryRepository(+SQLite 实现/内存 fake)、DataBaseHistory*
