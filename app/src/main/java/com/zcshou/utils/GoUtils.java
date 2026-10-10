@@ -167,6 +167,27 @@ public class GoUtils {
         return sdf.format(new Date(Long.parseLong(seconds + "000")));
     }
 
+    /**
+     * 解析用户可编辑的数值(偏好项输入框/坐标输入框),非法时回退默认值。
+     * 这些入口允许粘贴任意文本(如坐标框 digits 放行 "1.2.3"，海拔偏好可输入空串或非数字)，
+     * 直接 Double.parseDouble 会抛 NumberFormatException 崩掉界面；"NaN"/"Infinity" 虽能解析，
+     * 但会绕过后续的经纬度范围校验，故一并按非法处理。
+     */
+    public static double parseDoubleOrDefault(String value, double fallback) {
+        if (value == null) {
+            return fallback;
+        }
+
+        double parsed;
+        try {
+            parsed = Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+
+        return Double.isFinite(parsed) ? parsed : fallback;
+    }
+
     //提醒开启位置模拟的弹框
     public static  void showEnableMockLocationDialog(Context context) {
         new AlertDialog.Builder(context)

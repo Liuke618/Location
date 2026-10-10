@@ -423,10 +423,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         TextView poiLongitude = poiView.findViewById(R.id.poi_longitude);
         TextView poiLatitude = poiView.findViewById(R.id.poi_latitude);
         ImageButton ibSave = poiView.findViewById(R.id.poi_save);
-        ibSave.setOnClickListener(v -> {
-            recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
-            GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_save));
-        });
+        ibSave.setOnClickListener(v -> recordCurrentLocation(mMapState.getSelectedPoint().longitude,
+                mMapState.getSelectedPoint().latitude, true));
         ImageButton ibCopy = poiView.findViewById(R.id.poi_copy);
         ibCopy.setOnClickListener(v -> {
             //获取剪贴板管理器：
@@ -599,10 +597,13 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 if (TextUtils.isEmpty(dialog_lng_str) || TextUtils.isEmpty(dialog_lat_str)) {
                     GoUtils.DisplayToast(MainActivity.this,getResources().getString(R.string.app_error_input));
                 } else {
-                    double dialog_lng_double = Double.parseDouble(dialog_lng_str);
-                    double dialog_lat_double = Double.parseDouble(dialog_lat_str);
+                    // 输入框 digits 放行 "." 与 "-"，"1.2.3"、"-" 这类串可解析失败；解析不过按非法输入处理
+                    double dialog_lng_double = GoUtils.parseDoubleOrDefault(dialog_lng_str, Double.NaN);
+                    double dialog_lat_double = GoUtils.parseDoubleOrDefault(dialog_lat_str, Double.NaN);
 
-                    if (dialog_lng_double > 180.0 || dialog_lng_double < -180.0) {
+                    if (Double.isNaN(dialog_lng_double) || Double.isNaN(dialog_lat_double)) {
+                        GoUtils.DisplayToast(MainActivity.this,getResources().getString(R.string.app_error_input));
+                    } else if (dialog_lng_double > 180.0 || dialog_lng_double < -180.0) {
                         GoUtils.DisplayToast(MainActivity.this,  getResources().getString(R.string.app_error_longitude));
                     } else {
                         if (dialog_lat_double > 90.0 || dialog_lat_double < -90.0) {
@@ -668,7 +669,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 mButtonStart.setImageResource(R.drawable.ic_position);
             } else {
                 double[] latLng = MapUtils.gcj02towgs84(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
-                double alt = Double.parseDouble(sharedPreferences.getString("setting_altitude", "55.0"));
+                // 海拔来自 EditTextPreference，非法值按默认处理而非抛 NumberFormatException
+                double alt = GoUtils.parseDoubleOrDefault(sharedPreferences.getString("setting_altitude", "55.0"), 55.0);
                 if (!mMockController.setPosition(latLng[0], latLng[1], alt)) {
                     // 供给循环未建立(服务尚未连上或权限缺失)，此时清标记只会让用户以为已传送
                     GoUtils.DisplayToast(this, getResources().getString(R.string.app_error_mock_service));
@@ -677,7 +679,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 Snackbar.make(v, "已传送到新位置", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
 
-                recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
+                recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude, false);
                 //记住本次模拟位置(冷启动恢复用),须在选中点清除前落盘
                 saveLastPosition();
 
@@ -698,7 +700,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                             .setAction("Action", null).show();
                 } else {
                     double[] latLng = MapUtils.gcj02towgs84(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
-                    double alt = Double.parseDouble(sharedPreferences.getString("setting_altitude", "55.0"));
+                    double alt = GoUtils.parseDoubleOrDefault(sharedPreferences.getString("setting_altitude", "55.0"), 55.0);
                     if (!mMockController.start(latLng[0], latLng[1], alt)) {
                         // 服务没有真的起来就不改任何界面状态：落历史、清标记、换图标都会构成"已在模拟"的假象
                         XLog.e("模拟位置服务启动失败");
@@ -711,7 +713,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                     Snackbar.make(v, "模拟位置已启动", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show();
 
-                    recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
+                    recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude, false);
                     //记住本次模拟位置(冷启动恢复用),须在选中点清除前落盘
                     saveLastPosition();
                     mMapController.clearOverlays();
@@ -763,7 +765,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     /*============================== 历史记录 相关 ==============================*/
 
     // 记录请求的位置信息(逆地理收编于 GeocoderHelper SDK 通道,落库行构造保留在此)
-    private void recordCurrentLocation(double lng, double lat) {
+    // reportResult:仅信息窗"保存"按钮需要成/败提示;"传送"路径的落库是附带动作,失败只记日志,
+    // 不打断"已传送到新位置"主提示
+    private void recordCurrentLocation(double lng, double lat, boolean reportResult) {
         //参数坐标系:gcj02
         final double[] latLng = MapUtils.gcj02towgs84(lng, lat);
 
@@ -775,17 +779,27 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                         getResources().getString(R.string.history_location_default_name));
                 //镜像逆地理结果(行为冻结:落库路径不变,仅补状态镜像)
                 mMainViewModel.postCurrentAddress(address);
-                addLocationHistoryRow(address, latLng, lng, lat);
+                addLocationHistoryRow(address, latLng, lng, lat, reportResult);
             }
         });
     }
 
     // 插表参数：LocationRow 字段与原 ContentValues puts 逐字段对应（WGS84 经纬度、秒级时间戳、GCJ02 原坐标）
-    private void addLocationHistoryRow(String location, double[] wgsLatLng, double lng, double lat) {
+    private void addLocationHistoryRow(String location, double[] wgsLatLng, double lng, double lat, boolean reportResult) {
         LocationRow locationRow = new LocationRow(location, String.valueOf(wgsLatLng[0]), String.valueOf(wgsLatLng[1]),
                 System.currentTimeMillis() / 1000, Double.toString(lng), Double.toString(lat));
 
-        mHistoryRepository.addLocationRow(locationRow);
+        if (!mHistoryRepository.addLocationRow(locationRow)) {
+            XLog.e("DATABASE: 定位历史落库失败");
+            if (reportResult) {
+                GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_save_failed));
+            }
+            return;
+        }
+
+        if (reportResult) {
+            GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_save));
+        }
     }
 
     /*============================== SearchView 相关 ==============================*/

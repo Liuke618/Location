@@ -39,6 +39,7 @@
     <string name="app_search_null">没有匹配结果，请重新搜索</string>
     <string name="app_location_copy">位置已复制到剪切板</string>
     <string name="app_location_save">位置已保存</string>
+    <string name="app_location_save_failed">位置保存失败，请重试</string>
 
     <!-- 欢迎页 -->
     <string name="welcome_btn_txt">进入应用</string>
@@ -72,6 +73,7 @@
     <string name="history_idle">暂无历史记录</string>
     <string name="history_delete_ok">删除成功！</string>
     <string name="history_delete_error">删除记录失败</string>
+    <string name="history_rename_error">重命名记录失败</string>
     <string name="history_error_location">定位失败，请手动选取定位点</string>
     <string name="history_error_search">未搜索到指定内容</string>
 

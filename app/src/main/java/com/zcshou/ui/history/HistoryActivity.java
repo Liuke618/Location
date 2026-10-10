@@ -26,7 +26,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Objects;
 import java.util.Locale;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +97,8 @@ public class HistoryActivity extends BaseActivity {
                                 if (deleteRecord(-1)) {
                                     GoUtils.DisplayToast(this, getResources().getString(R.string.history_delete_ok));
                                     updateRecordList();
+                                } else {
+                                    GoUtils.DisplayToast(this, getResources().getString(R.string.history_delete_error));
                                 }
                             })
                     .setNegativeButton("取消",
@@ -134,7 +135,6 @@ public class HistoryActivity extends BaseActivity {
                 long TimeStamp = row.timestamp;
                 String BD09Longitude = row.lngCustom;
                 String BD09Latitude = row.latCustom;
-                Log.d("TB", ID + "\t" + Location + "\t" + Longitude + "\t" + Latitude + "\t" + TimeStamp + "\t" + BD09Longitude + "\t" + BD09Latitude);
                 BigDecimal bigDecimalLongitude = BigDecimal.valueOf(Double.parseDouble(Longitude));
                 BigDecimal bigDecimalLatitude = BigDecimal.valueOf(Double.parseDouble(Latitude));
                 BigDecimal bigDecimalBDLongitude = BigDecimal.valueOf(Double.parseDouble(BD09Longitude));
@@ -159,36 +159,36 @@ public class HistoryActivity extends BaseActivity {
     }
 
     private void recordArchive() {
-        double limits;
-        try {
-            limits = Double.parseDouble(sharedPreferences.getString("setting_pos_history", getResources().getString(R.string.history_expiration)));
-        } catch (NumberFormatException e) {  // GOOD: The exception is caught.
+        // 键名以 preferences_main.xml 为准：原读的 setting_pos_history 从未被写入，
+        // 设置页的"历史记录有效期"因此一直按默认 7 天生效
+        double limits = GoUtils.parseDoubleOrDefault(
+                sharedPreferences.getString("setting_history_expiration", getResources().getString(R.string.history_expiration)),
+                7);
+        // 非正数会把清理截止点推到当下甚至未来从而清空全部历史，按非法输入回退默认值
+        if (limits <= 0) {
             limits = 7;
         }
         final long weekSecond = (long) (limits * 24 * 60 * 60);
 
         try {
-            mHistoryRepository.clearExpiredLocationRows(System.currentTimeMillis() / 1000 - weekSecond);
+            if (!mHistoryRepository.clearExpiredLocationRows(System.currentTimeMillis() / 1000 - weekSecond)) {
+                Log.e("HistoryActivity", "ERROR - recordArchive(expired rows not cleared)");
+            }
         } catch (Exception e) {
             Log.e("HistoryActivity", "ERROR - recordArchive");
         }
     }
 
     private boolean deleteRecord(int ID) {
-        boolean deleteRet = true;
-
         try {
             if (ID <= -1) {
-                mHistoryRepository.clearAllLocationRows();
-            } else {
-                mHistoryRepository.deleteLocationRow(ID);
+                return mHistoryRepository.clearAllLocationRows();
             }
+            return mHistoryRepository.deleteLocationRow(ID);
         } catch (Exception e) {
-            deleteRet = false;
             Log.e("HistoryActivity", "ERROR - deleteRecord");
+            return false;
         }
-
-        return deleteRet;
     }
 
     private void initSearchView() {
@@ -216,7 +216,8 @@ public class HistoryActivity extends BaseActivity {
                 } else {
                     List<Map<String, Object>> searchRet = new ArrayList<>();
                     for (int i = 0; i < mAllRecord.size(); i++){
-                        if (mAllRecord.get(i).toString().indexOf(newText) > 0){
+                        // indexOf 命中位置 0(首字符即匹配)时返回 0，原 > 0 判定会漏掉这类记录
+                        if (mAllRecord.get(i).toString().indexOf(newText) >= 0){
                             searchRet.add(mAllRecord.get(i));
                         }
                     }
@@ -254,11 +255,22 @@ public class HistoryActivity extends BaseActivity {
             if (deleteRet) {
                 GoUtils.DisplayToast(HistoryActivity.this, getResources().getString(R.string.history_delete_ok));
                 updateRecordList();
+            } else {
+                GoUtils.DisplayToast(HistoryActivity.this, getResources().getString(R.string.history_delete_error));
             }
         });
         builder.setNegativeButton("取消", null);
 
         builder.show();
+    }
+
+    private boolean renameRecord(int ID, String newName) {
+        try {
+            return mHistoryRepository.renameLocationRow(ID, newName);
+        } catch (Exception e) {
+            Log.e("HistoryActivity", "ERROR - renameRecord");
+            return false;
+        }
     }
 
     private void showInputDialog(String locID, String name) {
@@ -271,8 +283,11 @@ public class HistoryActivity extends BaseActivity {
         builder.setView(input);
         builder.setPositiveButton("确认", (dialog, whichButton) -> {
             String userInput = input.getText().toString();
-            mHistoryRepository.renameLocationRow(Integer.parseInt(locID), userInput);
-            updateRecordList();
+            if (renameRecord(Integer.parseInt(locID), userInput)) {
+                updateRecordList();
+            } else {
+                GoUtils.DisplayToast(HistoryActivity.this, getResources().getString(R.string.history_rename_error));
+            }
         });
         builder.setNegativeButton("取消", null);
 
@@ -280,9 +295,13 @@ public class HistoryActivity extends BaseActivity {
     }
 
     private String[] randomOffset(String longitude, String latitude) {
+        // 偏移上限来自 EditTextPreference(可粘贴非数字，也可能被存成非 String)，解析失败回退默认值而非崩溃
         String max_offset_default = getResources().getString(R.string.setting_random_offset_default);
-        double lon_max_offset = Double.parseDouble(Objects.requireNonNull(sharedPreferences.getString("setting_lon_max_offset", max_offset_default)));
-        double lat_max_offset = Double.parseDouble(Objects.requireNonNull(sharedPreferences.getString("setting_lat_max_offset", max_offset_default)));
+        double default_offset = GoUtils.parseDoubleOrDefault(max_offset_default, 10.0);
+        double lon_max_offset = GoUtils.parseDoubleOrDefault(
+                sharedPreferences.getString("setting_lon_max_offset", max_offset_default), default_offset);
+        double lat_max_offset = GoUtils.parseDoubleOrDefault(
+                sharedPreferences.getString("setting_lat_max_offset", max_offset_default), default_offset);
         double lon = Double.parseDouble(longitude);
         double lat = Double.parseDouble(latitude);
 
