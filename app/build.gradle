@@ -13,6 +13,10 @@ if (amapApiKey.isEmpty()) {
     logger.warn('AMAP_API_KEY 未在 local.properties 中配置,高德地图运行时将无法初始化')
 }
 
+// 应用内更新的 release 来源(owner/repo)。刻意不再硬编码上游仓库:上游 APK 与本应用包名不同,
+// 装上的是另一个应用而非升级。默认指本 fork,可经 local.properties 或 CI 注入 UPDATE_REPO_SLUG 覆盖
+def updateRepoSlug = localProps.getProperty('UPDATE_REPO_SLUG', 'Liuke618/Location')
+
 android {
     // GradleDependency：SDK 37 已可用；compileSdk 升级需连动 AGP 兼容性评估，属行为变更，本分支锁定 36（分支既定决策）
     //noinspection GradleDependency
@@ -44,6 +48,7 @@ android {
         versionName '1.12.3' // https://semver.org/lang/zh-CN/
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders = [AMAP_API_KEY: amapApiKey]
+        buildConfigField "String", "UPDATE_REPO_SLUG", "\"${updateRepoSlug}\""
         ndk {
             //noinspection ChromeOsAbiSupport
             abiFilters "arm64-v8a"
