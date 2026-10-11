@@ -54,7 +54,7 @@ Toolchain: JDK 17 + Android SDK (AGP 9.x / targetSdk 36, single pure-Java `:app`
    sh gradlew clean assembleDebug assembleRelease test lint        # full gate
    ```
 
-   > `gradlew` has no executable bit — run it via `sh gradlew ...`.
+   > `gradlew` ships with the executable bit set — `./gradlew ...` (or `sh gradlew ...`) works as-is.
 
 ## Disclaimer
 

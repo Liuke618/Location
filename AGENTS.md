@@ -9,7 +9,7 @@ GoGoGo(影梭)——Android 免 Root 虚拟定位 App(GPL-3.0,仅 arm64-v8a),基
 ## 构建与验证
 
 - 工具链:AGP 9.4.1 / Gradle 9.8 / JDK 17 / minSdk 31 / targetSdk 36,纯 Java 单模块 `:app`
-- `gradlew` 无执行位——用 `sh gradlew ...`,**不要 chmod**(会弄脏 index)
+- `gradlew` 已带执行位(100755),`./gradlew ...` 与 `sh gradlew ...` 均可
 - 本地构建需 `local.properties`(gitignored):`sdk.dir` + `AMAP_API_KEY`(键缺失可构建,值为空串;运行时地图不初始化)+ 签名凭据 `KEY_ALIAS`/`KEY_STORE_PASSWORD`/`KEY_PASSWORD`(缺失则 assemble 在签名阶段失败)。CI 由 workflow 注入同名键,键名不可改
 - 坐标系约定:**地图/历史/偏好一律 GCJ02,模拟位置写 WGS84,坐标系转换只经 `MapUtils`**
 - 常用:`sh gradlew assembleDebug test lint`;全量验证:`sh gradlew clean assembleDebug assembleRelease test lint`(四项全绿是合入门槛)
@@ -36,7 +36,7 @@ com.yybb.location          # 应用包名(applicationId/namespace)
 
 - 纯 Java(无 Kotlin/DI 框架/Robolectric);测试仅 JVM(JUnit4 + core-testing),新测试放 `app/src/test` 镜像包
 - 注释为中文,匹配所在文件风格
-- **CRLF 文件**(WelcomeActivity/MainActivity/SettingsActivity/FragmentSettings/HistoryActivity/DataBaseHistory×2)——编辑时保持行尾
+- **行尾混杂**:约半数文件为 CRLF(WelcomeActivity/MainActivity/ServiceGo/HistoryActivity/GoUtils/MapUtils/多数 res xml/build 脚本等),另一部分为 LF(如 FavoriteActivity/MainViewModel)——**编辑任何文件前先检测行尾并保持原样**,勿整文件重写
 - 重构纪律:行为冻结(用户可见行为/时序零变化),以 git 实际行为为准而非计划文本(本项目有过计划文本与旧代码双写语义不一致的先例)
 
 ## 已知坑

@@ -54,7 +54,7 @@
    sh gradlew clean assembleDebug assembleRelease test lint        # 全量(合入门槛)
    ```
 
-   > `gradlew` 未带执行位,请用 `sh gradlew ...`(或自行 `chmod +x`,但勿提交)。
+   > `gradlew` 已带执行位,直接 `./gradlew ...` 即可(`sh gradlew ...` 亦可)。
 
 ## 免责声明
 
