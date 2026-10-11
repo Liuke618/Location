@@ -39,16 +39,15 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: gradle
-      # 创建 local.properties 文件
+      # 创建 local.properties 文件：高德 key 与签名凭据由 secrets 注入（键名与 build-release.yml 保持一致）
       - name: Create local.properties
         run: |
           cat << EOF > local.properties
           AMAP_API_KEY=${{ secrets.AMAP_API_KEY }}
+          KEY_ALIAS=${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD=${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
           EOF
-      # 给 gradlew 增加执行权限
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-      
       # 启动构建
       - name: Build with Gradle
         run: ./gradlew build
