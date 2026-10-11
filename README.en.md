@@ -1,29 +1,76 @@
 <p align="center">
-<img src="./docs/LOGO.png" height="80"/>
+<img src="./docs/images/LOGO.png" height="80"/>
 </p>
 
 <div align="center">
 
-[![GitHub stars](https://img.shields.io/github/stars/ZCShou/GoGoGo?logo=github)](https://github.com/ZCShou/GoGoGo/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/ZCShou/GoGoGo?logo=github)](https://github.com/ZCShou/GoGoGo/network)
-[![license](https://img.shields.io/github/license/ZCShou/GoGoGo)](https://github.com/ZCShou/GoGoGo/blob/master/LICENSE)
-[![GitHub Release](https://img.shields.io/github/v/release/ZCShou/GoGoGo?label=Release)](https://github.com/ZCShou/GoGoGo/releases)
-[![standard-readme compliant](https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/RichardLitt/standard-readme)
-</div>
-<div align="center">
+### YingSuo (GoGoGo)
 
-[![Build Check](https://github.com/ZCShou/GoGoGo/actions/workflows/build-check.yml/badge.svg)](https://github.com/ZCShou/GoGoGo/actions/workflows/build-check.yml)
-[![CodeQL](https://github.com/ZCShou/GoGoGo/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/ZCShou/GoGoGo/actions/workflows/codeql-analysis.yml)
+A mock location APP without ROOT for Android 12+.
+
+[简体中文](./README.md) | English
+
 </div>
 
-<div align="center">
-GoGoGo - A mock location app without root on android 8.0+.
-</div>
+## Introduction
 
-##
+&emsp;&emsp;YingSuo is a fork of [ZCShou/GoGoGo](https://github.com/ZCShou/GoGoGo), a mock location tool for Android built on the debug API (TestProvider) plus the AMap LBS SDK: pick a spot on the map (via search, tap, long-press, or manual coordinates) and teleport the system location there with one tap — no root required. Static teleport only; no route simulation.
 
-[Refrence Chinese, please](./README.md)
+&emsp;&emsp;By default the app **never reads your real location** — targets come from search, map picking, or manual input only. A "locate myself" switch in Settings can turn on the real-location blue dot when needed.
+
+## Features
+
+1. **Map-based mock location**: tap / long-press the map or enter coordinates (GCJ02 / WGS84), one-tap GO; teleport to new spots while mocking
+2. **POI search + reverse geocoding**: pick search suggestions with addresses; local search & location history
+3. **Favorites**: bookmark frequent spots, mark one as default — auto-selected on cold start and as GO fallback
+4. **Optional real location**: off by default (no real location requests at all); enable it for the blue dot and "back to my location"
+5. **In-app updates**: detects new releases and installs them
+6. **Agreement & privacy gate**: user agreement and privacy policy shown on first launch
+
+## Requirements
+
+- Android 12 (API 31) or later
+- arm64-v8a devices
+
+## Usage
+
+1. Install the APK, accept the agreement & privacy policy, grant location permission
+2. Select this app as the **mock location app** in Developer Options
+3. Search for a place or pick a spot on the map, then tap GO; tap GO again to stop
+4. (Optional) Settings → Map Location → enable "Locate myself" for the real-location blue dot
+
+## Build
+
+Toolchain: JDK 17 + Android SDK (AGP 9.x / targetSdk 36, single pure-Java `:app` module).
+
+1. Configure `local.properties` (not committed):
+   - `sdk.dir`: Android SDK path
+   - `AMAP_API_KEY`: AMap Native key (bound to package `com.yybb.location` and the signing cert SHA1)
+   - `KEY_ALIAS` / `KEY_STORE_PASSWORD` / `KEY_PASSWORD`: signing credentials
+2. Build & verify:
+
+   ```bash
+   sh gradlew assembleDebug test lint                              # daily
+   sh gradlew clean assembleDebug assembleRelease test lint        # full gate
+   ```
+
+   > `gradlew` has no executable bit — run it via `sh gradlew ...`.
+
+## Disclaimer
+
+1. For learning Android location debugging only. Do not use for cheating in games, fitness apps, or anything that violates laws or platform rules — you are on your own.
+2. Mocking relies on the system debug API; some apps (e.g. WeChat) may not be affected.
+
+## Docs
+
+- [Business overview (Chinese)](./docs/business-overview.md): what the code does today, per domain, kept in sync
+- [AGENTS.md](./AGENTS.md): build, package boundaries and conventions
+
+## Upstream & Credits
+
+- Upstream: [ZCShou/GoGoGo](https://github.com/ZCShou/GoGoGo) — thanks to the original author
+- References: [MockGPS](https://github.com/Hilaver/MockGPS), [together-go](https://github.com/bxxfighting/together-go), [Mocklation](https://github.com/P72B/Mocklation)
 
 ## License
-GPL-3.0-only © ZCShou
 
+[GPL-3.0-only](./LICENSE) © ZCShou. This fork remains GPL-3.0.
