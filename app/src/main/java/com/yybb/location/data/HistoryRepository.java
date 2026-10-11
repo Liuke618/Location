@@ -1,7 +1,5 @@
 package com.yybb.location.data;
 
-import com.yybb.location.data.DataBaseHistorySearch;
-
 import java.util.List;
 import java.util.Map;
 

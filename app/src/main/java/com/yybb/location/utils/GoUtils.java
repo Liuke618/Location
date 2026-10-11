@@ -18,6 +18,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 
+import com.elvishew.xlog.XLog;
 import com.yybb.location.R;
 
 import java.text.SimpleDateFormat;
@@ -117,7 +118,7 @@ public class GoUtils {
                 locationManager.removeTestProvider(LocationManager.GPS_PROVIDER);
             }
         } catch (SecurityException e) {
-            e.printStackTrace();
+            XLog.e("GOUTILS: 检测模拟位置权限失败", e);
         }
 
         return canMockPosition;
@@ -138,7 +139,7 @@ public class GoUtils {
             return packageInfo.versionName;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            XLog.e("GOUTILS: 获取版本名称失败", e);
         }
 
         return null;
@@ -158,7 +159,7 @@ public class GoUtils {
             int labelRes = applicationInfo.labelRes;
             return context.getResources().getString(labelRes);
         } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
+            XLog.e("GOUTILS: 获取应用名称失败", e);
         }
 
         return null;
@@ -206,7 +207,7 @@ public class GoUtils {
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         context.startActivity(intent);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        XLog.e("GOUTILS: 跳转开发者选项失败", e);
                     }
                 })
                 .setNegativeButton("取消",(dialog, which) -> {
@@ -224,7 +225,7 @@ public class GoUtils {
                         Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
                         context.startActivity(intent);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        XLog.e("GOUTILS: 跳转定位设置失败", e);
                     }
                 })
                 .setNegativeButton("取消",(dialog, which) -> {
@@ -243,7 +244,7 @@ public class GoUtils {
                         Intent intent = new Intent(Settings.ACTION_WIFI_SETTINGS);
                         context.startActivity(intent);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        XLog.e("GOUTILS: 跳转 WiFi 设置失败", e);
                     }
                 })
                 .setNegativeButton("忽略",(dialog, which) -> {

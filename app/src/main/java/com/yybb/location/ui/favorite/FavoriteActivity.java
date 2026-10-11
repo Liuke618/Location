@@ -9,7 +9,6 @@ import androidx.preference.PreferenceManager;
 
 import android.text.InputType;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -29,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.elvishew.xlog.XLog;
 import com.yybb.location.data.HistoryRepository;
 import com.yybb.location.data.HistoryRepository.LocationRow;
 import com.yybb.location.BaseActivity;
@@ -122,7 +122,7 @@ public class FavoriteActivity extends BaseActivity {
         try {
             mHistoryRepository = ((GoApplication) getApplicationContext()).getAppContainer().getHistoryRepository();
         } catch (Exception e) {
-            Log.e("FavoriteActivity", "ERROR - initRepository");
+            XLog.e("FAVORITE: ERROR - initRepository");
         }
     }
 
@@ -161,7 +161,7 @@ public class FavoriteActivity extends BaseActivity {
             }
         } catch (Exception e) {
             data.clear();
-            Log.e("FavoriteActivity", "ERROR - fetchAllRecord");
+            XLog.e("FAVORITE: ERROR - fetchAllRecord");
         }
 
         return data;
@@ -186,7 +186,7 @@ public class FavoriteActivity extends BaseActivity {
             }
             return ok;
         } catch (Exception e) {
-            Log.e("FavoriteActivity", "ERROR - deleteRecord");
+            XLog.e("FAVORITE: ERROR - deleteRecord");
             return false;
         }
     }
@@ -324,7 +324,7 @@ public class FavoriteActivity extends BaseActivity {
         try {
             return mHistoryRepository.renameFavoriteRow(ID, newName);
         } catch (Exception e) {
-            Log.e("FavoriteActivity", "ERROR - renameRecord");
+            XLog.e("FAVORITE: ERROR - renameRecord");
             return false;
         }
     }
@@ -434,7 +434,7 @@ public class FavoriteActivity extends BaseActivity {
                         new int[]{R.id.LocationID, R.id.LocationText, R.id.TimeText, R.id.WGSLatLngText, R.id.BDLatLngText});
                 mRecordListView.setAdapter(simAdapt);
             } catch (Exception e) {
-                Log.e("FavoriteActivity", "ERROR - updateRecordList");
+                XLog.e("FAVORITE: ERROR - updateRecordList");
             }
         }
     }

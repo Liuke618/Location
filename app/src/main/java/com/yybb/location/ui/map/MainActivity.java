@@ -29,7 +29,6 @@ import android.widget.SimpleAdapter;
 import android.widget.TextView;
 
 import androidx.activity.OnBackPressedCallback;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.SearchView;
@@ -63,9 +62,6 @@ import com.yybb.location.BaseActivity;
 import com.yybb.location.GoApplication;
 import com.yybb.location.R;
 import com.yybb.location.ui.location.CurrentLocationSource;
-import com.yybb.location.ui.map.GeocoderHelper;
-import com.yybb.location.ui.map.MapController;
-import com.yybb.location.ui.map.MapState;
 import com.yybb.location.ui.search.PoiSearchHelper;
 import com.yybb.location.ui.update.UpdateManager;
 import com.yybb.location.ui.favorite.FavoriteActivity;
@@ -931,7 +927,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
 
             mMapController.markMap();
 
-            // mSearchList.setVisibility(View.GONE);
             //搜索历史 插表参数：POI 点选保存收编于 PoiSearchHelper（gcj02towgs84 换算 + SearchRow 构造 + 落库）
             mPoiSearchHelper.savePoiSelection(mMapState.getMarkName(),
                     ((TextView) view.findViewById(R.id.poi_address)).getText().toString(),
@@ -950,7 +945,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
             if (searchIsLoc.equals("1")) {
                 String lng = ((TextView) view.findViewById(R.id.search_longitude)).getText().toString();
                 String lat = ((TextView) view.findViewById(R.id.search_latitude)).getText().toString();
-                // mMarkName = ((TextView) view.findViewById(R.id.poi_name)).getText().toString();
                 mMainViewModel.selectPoint(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)));
                 mMapController.getAMap().moveCamera(CameraUpdateFactory.changeLatLng(mMapState.getSelectedPoint()));
 
@@ -1016,7 +1010,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                         new String[] {POI_NAME, POI_ADDRESS, POI_LONGITUDE, POI_LATITUDE}, // 与下面数组元素要一一对应
                         new int[] {R.id.poi_name, R.id.poi_address, R.id.poi_longitude, R.id.poi_latitude});
                 mSearchList.setAdapter(simAdapt);
-                // mSearchList.setVisibility(View.VISIBLE);
                 mSearchLayout.setVisibility(View.VISIBLE);
             }
         });

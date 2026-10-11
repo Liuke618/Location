@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.amap.api.maps.model.LatLng;
-import com.yybb.location.ui.map.MapState;
 
 import java.util.List;
 import java.util.Map;

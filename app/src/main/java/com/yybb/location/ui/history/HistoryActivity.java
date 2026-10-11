@@ -9,7 +9,6 @@ import androidx.preference.PreferenceManager;
 
 import android.text.InputType;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -29,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.elvishew.xlog.XLog;
 import com.yybb.location.data.HistoryRepository;
 import com.yybb.location.data.HistoryRepository.LocationRow;
 import com.yybb.location.BaseActivity;
@@ -117,7 +117,7 @@ public class HistoryActivity extends BaseActivity {
         try {
             mHistoryRepository = ((GoApplication) getApplicationContext()).getAppContainer().getHistoryRepository();
         } catch (Exception e) {
-            Log.e("HistoryActivity", "ERROR - initLocationDataBase");
+            XLog.e("HISTORY: ERROR - initLocationDataBase");
         }
 
         recordArchive();
@@ -154,7 +154,7 @@ public class HistoryActivity extends BaseActivity {
             }
         } catch (Exception e) {
             data.clear();
-            Log.e("HistoryActivity", "ERROR - fetchAllRecord");
+            XLog.e("HISTORY: ERROR - fetchAllRecord");
         }
 
         return data;
@@ -174,10 +174,10 @@ public class HistoryActivity extends BaseActivity {
 
         try {
             if (!mHistoryRepository.clearExpiredLocationRows(System.currentTimeMillis() / 1000 - weekSecond)) {
-                Log.e("HistoryActivity", "ERROR - recordArchive(expired rows not cleared)");
+                XLog.e("HISTORY: ERROR - recordArchive(expired rows not cleared)");
             }
         } catch (Exception e) {
-            Log.e("HistoryActivity", "ERROR - recordArchive");
+            XLog.e("HISTORY: ERROR - recordArchive");
         }
     }
 
@@ -188,7 +188,7 @@ public class HistoryActivity extends BaseActivity {
             }
             return mHistoryRepository.deleteLocationRow(ID);
         } catch (Exception e) {
-            Log.e("HistoryActivity", "ERROR - deleteRecord");
+            XLog.e("HISTORY: ERROR - deleteRecord");
             return false;
         }
     }
@@ -282,7 +282,7 @@ public class HistoryActivity extends BaseActivity {
             // 未找到对应行(极端时序下已被清理/删除)，按失败提示而非谎报成功
             GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_mark_failed));
         } catch (Exception e) {
-            Log.e("HistoryActivity", "ERROR - favoriteRecord");
+            XLog.e("HISTORY: ERROR - favoriteRecord");
             GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_mark_failed));
         }
     }
@@ -291,7 +291,7 @@ public class HistoryActivity extends BaseActivity {
         try {
             return mHistoryRepository.renameLocationRow(ID, newName);
         } catch (Exception e) {
-            Log.e("HistoryActivity", "ERROR - renameRecord");
+            XLog.e("HISTORY: ERROR - renameRecord");
             return false;
         }
     }
@@ -403,7 +403,7 @@ public class HistoryActivity extends BaseActivity {
                         new int[]{R.id.LocationID, R.id.LocationText, R.id.TimeText, R.id.WGSLatLngText, R.id.BDLatLngText});
                 mRecordListView.setAdapter(simAdapt);
             } catch (Exception e) {
-                Log.e("HistoryActivity", "ERROR - updateRecordList");
+                XLog.e("HISTORY: ERROR - updateRecordList");
             }
         }
     }
