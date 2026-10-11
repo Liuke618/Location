@@ -26,7 +26,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 
@@ -267,6 +266,27 @@ public class HistoryActivity extends BaseActivity {
         builder.show();
     }
 
+    // 收藏既有历史行：按 id 取原始行，字段原样复制插入收藏表(收藏是复制不是移动，历史行保留)
+    private void favoriteRecord(int ID) {
+        try {
+            for (LocationRow row : mHistoryRepository.getLocationRows()) {
+                if (row.id == ID) {
+                    if (mHistoryRepository.addFavoriteRow(row)) {
+                        GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_mark));
+                    } else {
+                        GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_mark_failed));
+                    }
+                    return;
+                }
+            }
+            // 未找到对应行(极端时序下已被清理/删除)，按失败提示而非谎报成功
+            GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_mark_failed));
+        } catch (Exception e) {
+            Log.e("HistoryActivity", "ERROR - favoriteRecord");
+            GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_mark_failed));
+        }
+    }
+
     private boolean renameRecord(int ID, String newName) {
         try {
             return mHistoryRepository.renameLocationRow(ID, newName);
@@ -298,26 +318,8 @@ public class HistoryActivity extends BaseActivity {
     }
 
     private String[] randomOffset(String longitude, String latitude) {
-        // 偏移上限来自 EditTextPreference(可粘贴非数字，也可能被存成非 String)，解析失败回退默认值而非崩溃
-        String max_offset_default = getResources().getString(R.string.setting_random_offset_default);
-        double default_offset = GoUtils.parseDoubleOrDefault(max_offset_default, 10.0);
-        double lon_max_offset = GoUtils.parseDoubleOrDefault(
-                sharedPreferences.getString("setting_lon_max_offset", max_offset_default), default_offset);
-        double lat_max_offset = GoUtils.parseDoubleOrDefault(
-                sharedPreferences.getString("setting_lat_max_offset", max_offset_default), default_offset);
-        double lon = Double.parseDouble(longitude);
-        double lat = Double.parseDouble(latitude);
-
-        double randomLonOffset = (Math.random() * 2 - 1) * lon_max_offset;  // Longitude offset (meters)
-        double randomLatOffset = (Math.random() * 2 - 1) * lat_max_offset;  // Latitude offset (meters)
-
-        lon += randomLonOffset / 111320;    // (meters -> longitude)
-        lat += randomLatOffset / 110574;    // (meters -> latitude)
-
-        String offsetMessage = String.format(Locale.US, "经度偏移: %.2f米\n纬度偏移: %.2f米", randomLonOffset, randomLatOffset);
-        GoUtils.DisplayToast(this, offsetMessage);
-
-        return new String[]{String.valueOf(lon), String.valueOf(lat)};
+        // 偏移算法与默认值收编于 GoUtils(历史/收藏页点击行共用同一套随机偏移)
+        return GoUtils.randomOffset(this, sharedPreferences, longitude, latitude);
     }
 
     private void initRecordListView() {
@@ -352,6 +354,7 @@ public class HistoryActivity extends BaseActivity {
             PopupMenu popupMenu = new PopupMenu(HistoryActivity.this, view);
             popupMenu.setGravity(Gravity.END | Gravity.BOTTOM);
             popupMenu.getMenu().add("编辑");
+            popupMenu.getMenu().add("收藏");
             popupMenu.getMenu().add("删除");
 
             popupMenu.setOnMenuItemClickListener(item -> {
@@ -360,6 +363,9 @@ public class HistoryActivity extends BaseActivity {
                 switch (item.getTitle().toString()) {
                     case "编辑":
                         showInputDialog(locID, name);
+                        return true;
+                    case "收藏":
+                        favoriteRecord(Integer.parseInt(locID));
                         return true;
                     case "删除":
                         showDeleteDialog(locID);

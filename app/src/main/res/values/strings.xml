@@ -41,6 +41,8 @@
     <string name="app_location_copy">位置已复制到剪切板</string>
     <string name="app_location_save">位置已保存</string>
     <string name="app_location_save_failed">位置保存失败，请重试</string>
+    <string name="app_location_mark">已收藏</string>
+    <string name="app_location_mark_failed">收藏失败，请重试</string>
 
     <!-- 欢迎页 -->
     <string name="welcome_btn_txt">进入应用</string>
@@ -55,7 +57,7 @@
     <!-- 位置偏移相关参数 -->
     <string name="setting_group_location_offset">位置偏移</string>
     <string name="setting_random_offset">随机偏移</string>
-    <string name="setting_random_offset_summary">仅在使用历史位置时生效</string>
+    <string name="setting_random_offset_summary">仅在使用历史/收藏位置时生效</string>
     <string name="setting_random_offset_default">10.0</string>
     <string name="setting_lat_max_offset">经度最大偏移距离(米)</string>
     <string name="setting_lon_max_offset">纬度最大偏移距离(米)</string>
@@ -79,10 +81,21 @@
     <string name="history_error_location">定位失败，请手动选取定位点</string>
     <string name="history_error_search">未搜索到指定内容</string>
 
+    <!-- 收藏页面 -->
+    <string name="app_favorite">收藏</string>
+    <string name="favorite_idle">暂无收藏</string>
+    <string name="favorite_delete_ok">删除成功！</string>
+    <string name="favorite_delete_error">删除收藏失败</string>
+    <string name="favorite_rename_error">重命名收藏失败</string>
+    <string name="favorite_default_ok">已设为默认收藏</string>
+    <string name="favorite_default_cleared">已取消默认收藏</string>
+    <string name="favorite_default_failed">设置默认收藏失败</string>
+
     <!-- 导航页 -->
     <string name="nav_drawer_open">打开导航菜单</string>
     <string name="nav_drawer_close">关闭导航菜单</string>
     <string name="nav_menu_history">历史记录</string>
+    <string name="nav_menu_favorite">收藏</string>
     <string name="nav_menu_settings">设置</string>
     <string name="nav_menu_dev">开发人员选项</string>
     <string name="nav_menu_more">更多</string>

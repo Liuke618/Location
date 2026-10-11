@@ -2,6 +2,8 @@ package com.yybb.location.data;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.yybb.location.data.HistoryRepository.LocationRow;
@@ -189,6 +191,135 @@ public class HistoryRepositoryContractTest {
         assertFalse(mRepository.renameLocationRow(9999, "不存在"));
     }
 
+    /*============================== 收藏行 ==============================*/
+
+    @Test
+    public void getFavoriteRows_emptyTable_returnsEmptyList() {
+        assertTrue(mRepository.getFavoriteRows().isEmpty());
+    }
+
+    @Test
+    public void addFavoriteRow_thenGetFavoriteRows_roundTripsAllFields_withAssignedId() {
+        mRepository.addFavoriteRow(new LocationRow("收藏点A", "116.1", "39.1", 100L, "116.2", "39.2"));
+
+        List<LocationRow> rows = mRepository.getFavoriteRows();
+        assertEquals(1, rows.size());
+        LocationRow got = rows.get(0);
+        assertTrue(got.id > 0); // 自增分配，FavoriteActivity 需要此 ID
+        assertEquals("收藏点A", got.location);
+        assertEquals("116.1", got.lngWgs);
+        assertEquals("39.1", got.latWgs);
+        assertEquals(100L, got.timestamp);
+        assertEquals("116.2", got.lngCustom);
+        assertEquals("39.2", got.latCustom);
+    }
+
+    @Test
+    public void addFavoriteRow_sameWgsCoords_overwritesExistingRow() {
+        // saveFavoriteLocation 语义：同 WGS84 经纬度先删后插
+        mRepository.addFavoriteRow(new LocationRow("旧名", "116.1", "39.1", 100L, "116.2", "39.2"));
+        mRepository.addFavoriteRow(new LocationRow("新名", "116.1", "39.1", 200L, "116.2", "39.2"));
+
+        List<LocationRow> rows = mRepository.getFavoriteRows();
+        assertEquals(1, rows.size());
+        assertEquals("新名", rows.get(0).location);
+    }
+
+    @Test
+    public void getFavoriteRows_ordersByTimestampDesc() {
+        mRepository.addFavoriteRow(new LocationRow("A", "1.0", "1.0", 100L, "1.0", "1.0"));
+        mRepository.addFavoriteRow(new LocationRow("B", "2.0", "2.0", 300L, "2.0", "2.0"));
+        mRepository.addFavoriteRow(new LocationRow("C", "3.0", "3.0", 200L, "3.0", "3.0"));
+
+        List<LocationRow> rows = mRepository.getFavoriteRows();
+        assertEquals("B", rows.get(0).location);
+        assertEquals("C", rows.get(1).location);
+        assertEquals("A", rows.get(2).location);
+    }
+
+    @Test
+    public void favoriteRows_areIndependentFromLocationRows() {
+        // 收藏与定位历史互不干扰：清空历史不影响收藏，清空收藏不影响历史
+        mRepository.addLocationRow(new LocationRow("历史", "1.0", "1.0", 100L, "1.0", "1.0"));
+        mRepository.addFavoriteRow(new LocationRow("收藏", "1.0", "1.0", 100L, "1.0", "1.0"));
+
+        mRepository.clearAllLocationRows();
+        assertEquals(1, mRepository.getFavoriteRows().size());
+
+        mRepository.clearAllFavoriteRows();
+        assertTrue(mRepository.getLocationRows().isEmpty());
+        assertTrue(mRepository.getFavoriteRows().isEmpty());
+    }
+
+    @Test
+    public void deleteFavoriteRow_removesRowById() {
+        mRepository.addFavoriteRow(new LocationRow("A", "1.0", "1.0", 100L, "1.0", "1.0"));
+        mRepository.addFavoriteRow(new LocationRow("B", "2.0", "2.0", 200L, "2.0", "2.0"));
+        int idB = mRepository.getFavoriteRows().get(0).id; // B 最新在前
+
+        mRepository.deleteFavoriteRow(idB);
+
+        List<LocationRow> rows = mRepository.getFavoriteRows();
+        assertEquals(1, rows.size());
+        assertEquals("A", rows.get(0).location);
+    }
+
+    @Test
+    public void renameFavoriteRow_updatesFavoriteName() {
+        mRepository.addFavoriteRow(new LocationRow("A", "1.0", "1.0", 100L, "1.0", "1.0"));
+        int id = mRepository.getFavoriteRows().get(0).id;
+
+        mRepository.renameFavoriteRow(id, "改名后");
+
+        List<LocationRow> rows = mRepository.getFavoriteRows();
+        assertEquals(1, rows.size());
+        assertEquals("改名后", rows.get(0).location);
+        assertEquals(100L, rows.get(0).timestamp); // 其余字段不变
+    }
+
+    @Test
+    public void renameFavoriteRow_unknownId_reportsFailure() {
+        mRepository.addFavoriteRow(new LocationRow("A", "1.0", "1.0", 100L, "1.0", "1.0"));
+
+        // 目标行不存在 = 存储层没改动任何行，界面要能据此提示失败而不是谎报改名成功
+        assertFalse(mRepository.renameFavoriteRow(9999, "不存在"));
+    }
+
+    @Test
+    public void clearAllFavoriteRows_removesEverything() {
+        mRepository.addFavoriteRow(new LocationRow("A", "1.0", "1.0", 100L, "1.0", "1.0"));
+        mRepository.addFavoriteRow(new LocationRow("B", "2.0", "2.0", 200L, "2.0", "2.0"));
+
+        mRepository.clearAllFavoriteRows();
+
+        assertTrue(mRepository.getFavoriteRows().isEmpty());
+    }
+
+    @Test
+    public void findFavoriteRowByWgsCoords_matchesExactRow() {
+        // 默认收藏按 WGS84 坐标字符串精确匹配（与先删后插去重键同构）
+        mRepository.addFavoriteRow(new LocationRow("A", "1.0", "1.0", 100L, "1.0", "1.0"));
+
+        LocationRow got = mRepository.findFavoriteRowByWgsCoords("1.0", "1.0");
+        assertNotNull(got);
+        assertEquals("A", got.location);
+        assertEquals("1.0", got.lngWgs);
+        assertEquals("1.0", got.latWgs);
+    }
+
+    @Test
+    public void findFavoriteRowByWgsCoords_noMatch_returnsNull() {
+        mRepository.addFavoriteRow(new LocationRow("A", "1.0", "1.0", 100L, "1.0", "1.0"));
+
+        assertNull(mRepository.findFavoriteRowByWgsCoords("2.0", "2.0"));
+        assertNull(mRepository.findFavoriteRowByWgsCoords("1.0", "1.1"));
+    }
+
+    @Test
+    public void findFavoriteRowByWgsCoords_emptyTable_returnsNull() {
+        assertNull(mRepository.findFavoriteRowByWgsCoords("1.0", "1.0"));
+    }
+
     /*============================== 写侧成败回传（界面提示的依据） ==============================*/
 
     @Test
@@ -200,5 +331,9 @@ public class HistoryRepositoryContractTest {
         assertTrue(mRepository.deleteLocationRow(1));
         assertTrue(mRepository.clearAllLocationRows());
         assertTrue(mRepository.deleteSearchRow("k1"));
+        assertTrue(mRepository.addFavoriteRow(new LocationRow("收藏", "1.0", "1.0", 100L, "1.0", "1.0")));
+        assertTrue(mRepository.renameFavoriteRow(1, "改名后"));
+        assertTrue(mRepository.deleteFavoriteRow(1));
+        assertTrue(mRepository.clearAllFavoriteRows());
     }
 }

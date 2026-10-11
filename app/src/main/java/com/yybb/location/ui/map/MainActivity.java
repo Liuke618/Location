@@ -68,6 +68,7 @@ import com.yybb.location.ui.map.MapController;
 import com.yybb.location.ui.map.MapState;
 import com.yybb.location.ui.search.PoiSearchHelper;
 import com.yybb.location.ui.update.UpdateManager;
+import com.yybb.location.ui.favorite.FavoriteActivity;
 import com.yybb.location.ui.history.HistoryActivity;
 import com.yybb.location.ui.settings.SettingsActivity;
 import com.yybb.location.utils.ShareUtils;
@@ -185,6 +186,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
 
         initMap(savedInstanceState);
 
+        //历史仓库提前初始化:冷启动恢复要先查默认收藏(原在 initSearchView 前初始化,时序上晚于恢复路径)
+        mHistoryRepository = ((GoApplication) getApplicationContext()).getAppContainer().getHistoryRepository();
+
         //启动恢复:仅冷启动执行,把上次模拟位置直接就绪(上标记+移视野,选中点可一键 GO)
         if (savedInstanceState == null) {
             restoreLastPosition();
@@ -196,8 +200,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
 
         //模拟位置控制器：随 Activity 创建，随 Activity 一起废弃（生命周期约定见 ServiceGoController）
         mMockController = new ServiceGoController(this);
-
-        mHistoryRepository = ((GoApplication) getApplicationContext()).getAppContainer().getHistoryRepository();
 
         initSearchView();
 
@@ -370,7 +372,10 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         mNavigationView.setNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
 
-            if (id == R.id.nav_history) {
+            if (id == R.id.nav_favorite) {
+                Intent intent = new Intent(MainActivity.this, FavoriteActivity.class);
+                startActivity(intent);
+            } else if (id == R.id.nav_history) {
                 Intent intent = new Intent(MainActivity.this, HistoryActivity.class);
 
                 startActivity(intent);
@@ -449,6 +454,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         ibShare.setOnClickListener(v -> ShareUtils.shareText(MainActivity.this, "分享位置", poiLongitude.getText()+","+poiLatitude.getText()));
         ImageButton ibFly = poiView.findViewById(R.id.poi_fly);
         ibFly.setOnClickListener(this::doGoLocation);
+        ImageButton ibMark = poiView.findViewById(R.id.poi_mark);
+        ibMark.setOnClickListener(v -> favoriteCurrentLocation(mMapState.getSelectedPoint().longitude,
+                mMapState.getSelectedPoint().latitude));
         // SDK 逆地理构造与监听注册收编于 GeocoderHelper(仅反向通道)
         mGeocoderHelper = new GeocoderHelper();
         mGeocoderHelper.initSdk(this, new GeocoderHelper.SdkGeoCoderListener() {
@@ -704,7 +712,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 GoUtils.showEnableMockLocationDialog(this);
                 XLog.e("无模拟位置权限!");
             } else {
-                if (mMapState.getSelectedPoint() == null) {
+                if (mMapState.getSelectedPoint() == null && !selectDefaultFavorite()) {
                     Snackbar.make(v, "请先点击地图位置或者搜索位置", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show();
                 } else {
@@ -753,6 +761,12 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
 
     //冷启动恢复:有存值则选中上次模拟位置并移动视野(街道级,与"返回当前位置"一致);无存值保持原默认行为
     private void restoreLastPosition() {
+        //默认收藏优先于"上次位置":已设默认收藏则冷启动直接就绪默认地址(一键 GO 即模拟默认点)
+        if (selectDefaultFavorite()) {
+            mMapController.getAMap().animateCamera(CameraUpdateFactory.newLatLngZoom(mMapState.getSelectedPoint(), 18.0f));
+            return;
+        }
+
         String lat = sharedPreferences.getString("setting_last_lat", "");
         String lng = sharedPreferences.getString("setting_last_lng", "");
         if (lat.isEmpty() || lng.isEmpty()) {
@@ -809,6 +823,62 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         if (reportResult) {
             GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_save));
         }
+    }
+
+    /*============================== 收藏 相关 ==============================*/
+
+    // 收藏当前选中点(与"保存"同构：GCJ02 入参，逆地理取地址后落收藏表；WGS84 换算只经 MapUtils)
+    private void favoriteCurrentLocation(double lng, double lat) {
+        //参数坐标系:gcj02
+        final double[] latLng = MapUtils.gcj02towgs84(lng, lat);
+
+        mGeocoderHelper.resolveAddress(lng, lat, new GeocoderHelper.AddressCallback() {
+            @Override
+            public void onAddressResolved(int rCode, String formatAddress) {
+                //地址提取收敛于纯函数 extractAddress(失败回退标记名,与"保存"路径一致)
+                String address = GeocoderHelper.extractAddress(rCode, formatAddress, mMapState.getMarkName(),
+                        getResources().getString(R.string.history_location_default_name));
+                addFavoriteRow(address, latLng, lng, lat);
+            }
+        });
+    }
+
+    // 插表参数与 addLocationHistoryRow 逐字段对应(WGS84 经纬度、秒级时间戳、GCJ02 原坐标)
+    private void addFavoriteRow(String location, double[] wgsLatLng, double lng, double lat) {
+        LocationRow favoriteRow = new LocationRow(location, String.valueOf(wgsLatLng[0]), String.valueOf(wgsLatLng[1]),
+                System.currentTimeMillis() / 1000, Double.toString(lng), Double.toString(lat));
+
+        if (!mHistoryRepository.addFavoriteRow(favoriteRow)) {
+            XLog.e("DATABASE: 收藏落库失败");
+            GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_mark_failed));
+            return;
+        }
+
+        GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_mark));
+    }
+
+    // 选中默认收藏点(GCJ02 入图)：已设默认收藏则选中上标记并返回 true，否则不动状态返回 false。
+    // 不套随机偏移——默认地址是确定性目标，与手选点 GO 同待遇
+    private boolean selectDefaultFavorite() {
+        LocationRow def = resolveDefaultFavorite();
+        if (def == null) {
+            return false;
+        }
+        mMainViewModel.selectPoint(new LatLng(Double.parseDouble(def.latCustom), Double.parseDouble(def.lngCustom)));
+        mMapState.setMarkName(def.location);
+        mMapController.markMap();
+        return true;
+    }
+
+    // 默认收藏以 WGS84 坐标字符串为身份存于偏好(与收藏表先删后插的去重键同构，改名不失效)；
+    // 对应收藏行被删后查不到，即视为无默认
+    private LocationRow resolveDefaultFavorite() {
+        String lng = sharedPreferences.getString("setting_default_favorite_lng_wgs", "");
+        String lat = sharedPreferences.getString("setting_default_favorite_lat_wgs", "");
+        if (lng.isEmpty() || lat.isEmpty()) {
+            return null;
+        }
+        return mHistoryRepository.findFavoriteRowByWgsCoords(lng, lat);
     }
 
     /*============================== SearchView 相关 ==============================*/

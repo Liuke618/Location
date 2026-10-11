@@ -54,6 +54,26 @@ public interface HistoryRepository {
     /** 修改指定 id 的定位历史行名称 */
     boolean renameLocationRow(int id, String newName);
 
+    /*============================== 收藏 ==============================*/
+
+    /** 按时间降序返回收藏行（行形与定位历史一致，含自增 id；收藏不参与过期清理） */
+    List<LocationRow> getFavoriteRows();
+
+    /** 保存收藏行（同 WGS84 经纬度先删后插，去重覆盖语义；id 由存储层自增分配） */
+    boolean addFavoriteRow(LocationRow row);
+
+    /** 删除指定 id 的收藏行 */
+    boolean deleteFavoriteRow(int id);
+
+    /** 修改指定 id 的收藏行名称（目标行不存在回传 false） */
+    boolean renameFavoriteRow(int id, String newName);
+
+    /** 删除全部收藏行 */
+    boolean clearAllFavoriteRows();
+
+    /** 按 WGS84 坐标精确匹配收藏行（字符串相等，与先删后插去重键同构；无命中返回 null） */
+    LocationRow findFavoriteRowByWgsCoords(String lngWgs, String latWgs);
+
     /** 搜索历史行值对象（字段与 DataBaseHistorySearch 表列一一对应） */
     class SearchRow {
         public final String key;

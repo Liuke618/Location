@@ -2,6 +2,7 @@ package com.yybb.location.utils;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -16,6 +17,8 @@ import android.view.Gravity;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
+
+import com.yybb.location.R;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -246,6 +249,33 @@ public class GoUtils {
                 .setNegativeButton("忽略",(dialog, which) -> {
                 })
                 .show();
+    }
+
+    /**
+     * 对指定 GCJ02 坐标做设置范围内的随机偏移(米)，历史/收藏页点击行共用；
+     * 偏移上限来自偏好项(可粘贴非数字)，解析失败回退默认值而非崩溃，偏移量经 toast 呈现。
+     */
+    public static String[] randomOffset(Context context, SharedPreferences sharedPreferences,
+                                        String longitude, String latitude) {
+        String max_offset_default = context.getResources().getString(R.string.setting_random_offset_default);
+        double default_offset = parseDoubleOrDefault(max_offset_default, 10.0);
+        double lon_max_offset = parseDoubleOrDefault(
+                sharedPreferences.getString("setting_lon_max_offset", max_offset_default), default_offset);
+        double lat_max_offset = parseDoubleOrDefault(
+                sharedPreferences.getString("setting_lat_max_offset", max_offset_default), default_offset);
+        double lon = Double.parseDouble(longitude);
+        double lat = Double.parseDouble(latitude);
+
+        double randomLonOffset = (Math.random() * 2 - 1) * lon_max_offset;  // Longitude offset (meters)
+        double randomLatOffset = (Math.random() * 2 - 1) * lat_max_offset;  // Latitude offset (meters)
+
+        lon += randomLonOffset / 111320;    // (meters -> longitude)
+        lat += randomLatOffset / 110574;    // (meters -> latitude)
+
+        String offsetMessage = String.format(Locale.US, "经度偏移: %.2f米\n纬度偏移: %.2f米", randomLonOffset, randomLatOffset);
+        DisplayToast(context, offsetMessage);
+
+        return new String[]{String.valueOf(lon), String.valueOf(lat)};
     }
 
     public static  void DisplayToast(Context context, String str) {

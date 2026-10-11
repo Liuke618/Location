@@ -98,6 +98,11 @@
             android:label="@string/app_history"
             android:exported="false" />
 
+        <activity
+            android:name="com.yybb.location.ui.favorite.FavoriteActivity"
+            android:label="@string/app_favorite"
+            android:exported="false" />
+
     </application>
 
 </manifest>

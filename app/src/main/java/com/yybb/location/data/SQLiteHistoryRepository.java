@@ -23,13 +23,16 @@ import java.util.Map;
 public class SQLiteHistoryRepository implements HistoryRepository {
     private final DataBaseHistoryLocation mLocationDBHelper;
     private final DataBaseHistorySearch mSearchDBHelper;
+    private final DataBaseFavoriteLocation mFavoriteDBHelper;
     private SQLiteDatabase mLocationDB;
     private SQLiteDatabase mSearchDB;
+    private SQLiteDatabase mFavoriteDB;
 
     public SQLiteHistoryRepository(Context context) {
         Context appContext = context.getApplicationContext();
         DataBaseHistoryLocation locationDBHelper = null;
         DataBaseHistorySearch searchDBHelper = null;
+        DataBaseFavoriteLocation favoriteDBHelper = null;
         try {
             // 定位历史
             locationDBHelper = new DataBaseHistoryLocation(appContext);
@@ -37,11 +40,15 @@ public class SQLiteHistoryRepository implements HistoryRepository {
             // 搜索历史
             searchDBHelper = new DataBaseHistorySearch(appContext);
             mSearchDB = searchDBHelper.getWritableDatabase();
+            // 收藏
+            favoriteDBHelper = new DataBaseFavoriteLocation(appContext);
+            mFavoriteDB = favoriteDBHelper.getWritableDatabase();
         } catch (Exception e) {
             XLog.e("DATABASE: sqlite init error");
         }
         mLocationDBHelper = locationDBHelper;
         mSearchDBHelper = searchDBHelper;
+        mFavoriteDBHelper = favoriteDBHelper;
     }
 
     /*============================== 搜索历史 ==============================*/
@@ -194,6 +201,112 @@ public class SQLiteHistoryRepository implements HistoryRepository {
         } catch (Exception e) {
             XLog.e("DATABASE: update error");
             return false;
+        }
+    }
+
+    /*============================== 收藏 ==============================*/
+
+    @Override
+    public List<LocationRow> getFavoriteRows() {
+        List<LocationRow> data = new ArrayList<>();
+
+        try {
+            Cursor cursor = mFavoriteDB.query(DataBaseFavoriteLocation.TABLE_NAME, null,
+                    DataBaseFavoriteLocation.DB_COLUMN_ID + " > ?", new String[]{"0"},
+                    null, null, DataBaseFavoriteLocation.DB_COLUMN_TIMESTAMP + " DESC", null);
+
+            while (cursor.moveToNext()) {
+                data.add(new LocationRow(cursor.getInt(0),
+                        cursor.getString(1),
+                        cursor.getString(2),
+                        cursor.getString(3),
+                        cursor.getLong(4),
+                        cursor.getString(5),
+                        cursor.getString(6)));
+            }
+            cursor.close();
+        } catch (Exception e) {
+            XLog.e("DATABASE: getFavoriteRows error");
+        }
+
+        return data;
+    }
+
+    @Override
+    public boolean addFavoriteRow(LocationRow row) {
+        try {
+            ContentValues contentValues = new ContentValues();
+            contentValues.put(DataBaseFavoriteLocation.DB_COLUMN_LOCATION, row.location);
+            contentValues.put(DataBaseFavoriteLocation.DB_COLUMN_LONGITUDE_WGS84, row.lngWgs);
+            contentValues.put(DataBaseFavoriteLocation.DB_COLUMN_LATITUDE_WGS84, row.latWgs);
+            contentValues.put(DataBaseFavoriteLocation.DB_COLUMN_TIMESTAMP, row.timestamp);
+            contentValues.put(DataBaseFavoriteLocation.DB_COLUMN_LONGITUDE_CUSTOM, row.lngCustom);
+            contentValues.put(DataBaseFavoriteLocation.DB_COLUMN_LATITUDE_CUSTOM, row.latCustom);
+
+            return DataBaseFavoriteLocation.saveFavoriteLocation(mFavoriteDB, contentValues);
+        } catch (Exception e) {
+            XLog.e("DATABASE: insert error");
+            return false;
+        }
+    }
+
+    @Override
+    public boolean deleteFavoriteRow(int id) {
+        try {
+            mFavoriteDB.delete(DataBaseFavoriteLocation.TABLE_NAME,
+                    DataBaseFavoriteLocation.DB_COLUMN_ID + " = ?", new String[]{Integer.toString(id)});
+            return true;
+        } catch (Exception e) {
+            XLog.e("DATABASE: delete error");
+            return false;
+        }
+    }
+
+    @Override
+    public boolean renameFavoriteRow(int id, String newName) {
+        try {
+            return DataBaseFavoriteLocation.updateFavoriteLocation(mFavoriteDB, Integer.toString(id), newName);
+        } catch (Exception e) {
+            XLog.e("DATABASE: update error");
+            return false;
+        }
+    }
+
+    @Override
+    public boolean clearAllFavoriteRows() {
+        try {
+            mFavoriteDB.delete(DataBaseFavoriteLocation.TABLE_NAME, null, null);
+            return true;
+        } catch (Exception e) {
+            XLog.e("DATABASE: delete error");
+            return false;
+        }
+    }
+
+    @Override
+    public LocationRow findFavoriteRowByWgsCoords(String lngWgs, String latWgs) {
+        try {
+            Cursor cursor = mFavoriteDB.query(DataBaseFavoriteLocation.TABLE_NAME, null,
+                    DataBaseFavoriteLocation.DB_COLUMN_LONGITUDE_WGS84 + " = ? AND " +
+                            DataBaseFavoriteLocation.DB_COLUMN_LATITUDE_WGS84 + " = ?",
+                    new String[]{lngWgs, latWgs},
+                    null, null, null, null);
+
+            LocationRow row = null;
+            if (cursor.moveToNext()) {
+                row = new LocationRow(cursor.getInt(0),
+                        cursor.getString(1),
+                        cursor.getString(2),
+                        cursor.getString(3),
+                        cursor.getLong(4),
+                        cursor.getString(5),
+                        cursor.getString(6));
+            }
+            cursor.close();
+            return row;
+        } catch (Exception e) {
+            XLog.e("DATABASE: findFavoriteRowByWgsCoords error");
+            return null;
         }
     }
 }

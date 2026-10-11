@@ -17,7 +17,9 @@ import java.util.Objects;
 public class InMemoryHistoryRepository implements HistoryRepository {
     private final Map<String, SearchRow> mSearchRowsByKey = new LinkedHashMap<>();
     private final List<LocationRow> mLocationRows = new ArrayList<>();
+    private final List<LocationRow> mFavoriteRows = new ArrayList<>();
     private int mNextLocationId = 1;
+    private int mNextFavoriteId = 1;
 
     @Override
     public List<Map<String, Object>> getSearchRows() {
@@ -100,5 +102,62 @@ public class InMemoryHistoryRepository implements HistoryRepository {
         }
         // 与 SQLite 实现的 update 影响行数语义一致：目标行不存在即失败
         return false;
+    }
+
+    /*============================== 收藏 ==============================*/
+
+    @Override
+    public List<LocationRow> getFavoriteRows() {
+        List<LocationRow> rows = new ArrayList<>();
+        for (LocationRow row : mFavoriteRows) {
+            rows.add(row.copy());
+        }
+        rows.sort((a, b) -> Long.compare(b.timestamp, a.timestamp)); // ORDER BY timestamp DESC
+        return rows;
+    }
+
+    @Override
+    public boolean addFavoriteRow(LocationRow row) {
+        mFavoriteRows.removeIf(r -> Objects.equals(r.lngWgs, row.lngWgs)
+                && Objects.equals(r.latWgs, row.latWgs)); // 同 WGS84 经纬度先删后插
+        mFavoriteRows.add(new LocationRow(mNextFavoriteId++, row.location, row.lngWgs,
+                row.latWgs, row.timestamp, row.lngCustom, row.latCustom));
+        return true;
+    }
+
+    @Override
+    public boolean deleteFavoriteRow(int id) {
+        mFavoriteRows.removeIf(r -> r.id == id);
+        return true;
+    }
+
+    @Override
+    public boolean renameFavoriteRow(int id, String newName) {
+        for (int i = 0; i < mFavoriteRows.size(); i++) {
+            LocationRow row = mFavoriteRows.get(i);
+            if (row.id == id) {
+                mFavoriteRows.set(i, new LocationRow(row.id, newName, row.lngWgs,
+                        row.latWgs, row.timestamp, row.lngCustom, row.latCustom));
+                return true;
+            }
+        }
+        // 与 SQLite 实现的 update 影响行数语义一致：目标行不存在即失败
+        return false;
+    }
+
+    @Override
+    public boolean clearAllFavoriteRows() {
+        mFavoriteRows.clear();
+        return true;
+    }
+
+    @Override
+    public LocationRow findFavoriteRowByWgsCoords(String lngWgs, String latWgs) {
+        for (LocationRow row : mFavoriteRows) {
+            if (Objects.equals(row.lngWgs, lngWgs) && Objects.equals(row.latWgs, latWgs)) {
+                return row.copy();
+            }
+        }
+        return null;
     }
 }
