@@ -61,6 +61,10 @@
     <string name="setting_random_offset_default">10.0</string>
     <string name="setting_lat_max_offset">经度最大偏移距离(米)</string>
     <string name="setting_lon_max_offset">纬度最大偏移距离(米)</string>
+    <!-- 地图定位相关参数 -->
+    <string name="setting_group_map_location">地图定位</string>
+    <string name="setting_locate_self">定位自己的位置</string>
+    <string name="setting_locate_self_summary">开启后地图获取真实位置并显示蓝点；关闭时仅通过搜索或选点模拟定位</string>
     <!-- 记录相关参数 -->
     <string name="setting_group_log">记录</string>
     <string name="setting_log_off">关闭日志</string>

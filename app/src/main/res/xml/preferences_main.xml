@@ -40,6 +40,18 @@
     </PreferenceCategory>
 
     <PreferenceCategory
+        app:title="@string/setting_group_map_location"
+        app:iconSpaceReserved="false">
+
+        <SwitchPreferenceCompat
+            app:key="setting_locate_self"
+            app:title="@string/setting_locate_self"
+            app:summary="@string/setting_locate_self_summary"
+            app:defaultValue="false"
+            app:iconSpaceReserved="false"/>
+    </PreferenceCategory>
+
+    <PreferenceCategory
         app:title="@string/setting_group_log"
         app:iconSpaceReserved="false">
 

@@ -222,9 +222,18 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     protected void onResume() {
         XLog.i("MainActivity: onResume");
         mMapController.onResume();
+        applyLocateSelfSetting();
         mSensorManager.registerListener(this, mSensorAccelerometer, SensorManager.SENSOR_DELAY_UI);
         mSensorManager.registerListener(this, mSensorMagnetic, SensorManager.SENSOR_DELAY_UI);
         super.onResume();
+    }
+
+    //应用"定位自己的位置"开关(默认关):关闭时不激活定位图层(不发起真实定位、无蓝点)并隐藏"回到定位点"按钮,
+    //选择点只来自搜索/选点/输入坐标;设置页返回后经 onResume 重读即时生效
+    private void applyLocateSelfSetting() {
+        boolean locateSelf = sharedPreferences.getBoolean("setting_locate_self", false);
+        mMapController.setMyLocationEnabled(locateSelf);
+        findViewById(R.id.cur_position).setVisibility(locateSelf ? View.VISIBLE : View.GONE);
     }
 
     @Override

@@ -81,6 +81,11 @@ public class CurrentLocationSource implements LocationSource {
 
     //初始化定位客户端(隐私合规接口已在 GoApplication 统一调用)
     private void init() {
+        //重复激活(定位图层开关切回):复用既有客户端,避免重复构造泄漏
+        if (mLocClient != null) {
+            start();
+            return;
+        }
         try {
             mLocClient = new AMapLocationClient(mContext);
             mLocClient.setLocationListener(amapLocation -> {

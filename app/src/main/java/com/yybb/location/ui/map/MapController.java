@@ -69,15 +69,19 @@ public class MapController {
         mMapView.onDestroy();
     }
 
-    // 地图初始化(蓝点:显示带方向、视野不跟随,与原百度图层行为一致)
+    // 地图初始化(定位数据源在此接线;图层是否启用由持有者按"定位自己的位置"开关决定,见 setMyLocationEnabled)
     public void init(LocationSource locationSource) {
         mAMap.setMapType(AMap.MAP_TYPE_NORMAL);
         mAMap.setMyLocationStyle(new MyLocationStyle().myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER));
         mAMap.setLocationSource(locationSource);
-        mAMap.setMyLocationEnabled(true);
         mAMap.setOnMapClickListener(point -> mListener.onMapClick(point.longitude, point.latitude));
         mAMap.setOnMapLongClickListener(point -> mListener.onMapLongClick(point.longitude, point.latitude));
         mAMap.setOnPOIClickListener(poi -> mListener.onPoiClick(poi));
+    }
+
+    //定位图层开关(真实定位):关闭时不激活 LocationSource,不发起任何真实定位请求
+    public void setMyLocationEnabled(boolean enabled) {
+        mAMap.setMyLocationEnabled(enabled);
     }
 
     //标定选择的位置
