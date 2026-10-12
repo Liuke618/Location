@@ -21,10 +21,10 @@ assignees: ''
 
 ### 版本信息 / Version Info
 
-- 影梭版本 / GoGoGo Version : 
+- 任意门版本 / GoGoGo Version : 
 - 系统版本 / OS Version : 
 
-<!-- 请在上方描述有缺陷的影梭版本及使用的系统版本。 -->
+<!-- 请在上方描述有缺陷的任意门版本及使用的系统版本。 -->
 <!-- Please describe version of GoGoGo and used OS above. -->
 
 ### 复现步骤 / Steps to Reproduce

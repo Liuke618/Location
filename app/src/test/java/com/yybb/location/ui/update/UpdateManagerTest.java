@@ -29,7 +29,7 @@ public class UpdateManagerTest {
     /* 合法 release 响应（字段形态与 GitHub API 一致，assets 用字符串形态锚定二次解析路径） */
     private static final String RELEASE_JSON = """
             {
-                "name": "影梭 v1.2.3",
+                "name": "任意门 v1.2.3",
                 "tag_name": "v1.2.3",
                 "created_at": "2026-01-02T03:04:05Z",
                 "target_commitish": "master",
@@ -42,7 +42,7 @@ public class UpdateManagerTest {
     public void parseRelease_validJson_extractsAllFields() throws JSONException {
         UpdateManager.UpdateInfo info = UpdateManager.parseRelease(RELEASE_JSON);
 
-        assertEquals("影梭 v1.2.3", info.name);
+        assertEquals("任意门 v1.2.3", info.name);
         assertEquals("v1.2.3", info.tagName);
         assertEquals("2026-01-02T03:04:05Z", info.createdAt);
         assertEquals("master", info.commitish);
@@ -56,7 +56,7 @@ public class UpdateManagerTest {
         // 缺 assets 键 → getString("assets") 抛 JSONException（对话框中止组装，由调用方 catch 兜底）
         String json = """
                 {
-                    "name": "影梭 v1.2.3",
+                    "name": "任意门 v1.2.3",
                     "tag_name": "v1.2.3",
                     "created_at": "2026-01-02T03:04:05Z",
                     "target_commitish": "master",
@@ -71,7 +71,7 @@ public class UpdateManagerTest {
         // assets 为空数组（无 APK 资产）→ getJSONObject(0) 抛 JSONException
         String json = """
                 {
-                    "name": "影梭 v1.2.3",
+                    "name": "任意门 v1.2.3",
                     "tag_name": "v1.2.3",
                     "created_at": "2026-01-02T03:04:05Z",
                     "target_commitish": "master",
@@ -87,7 +87,7 @@ public class UpdateManagerTest {
         // 缺 body 键 → getString("body") 抛 JSONException
         String json = """
                 {
-                    "name": "影梭 v1.2.3",
+                    "name": "任意门 v1.2.3",
                     "tag_name": "v1.2.3",
                     "created_at": "2026-01-02T03:04:05Z",
                     "target_commitish": "master",
@@ -117,7 +117,7 @@ public class UpdateManagerTest {
         // 缺 tag_name 键 → 版本判断无依据，抛 JSONException 由调用方 catch 兜底
         String json = """
                 {
-                    "name": "影梭 v1.2.3",
+                    "name": "任意门 v1.2.3",
                     "created_at": "2026-01-02T03:04:05Z",
                     "target_commitish": "master",
                     "body": "## 更新内容",
@@ -158,7 +158,7 @@ public class UpdateManagerTest {
         // 畸形/空值不抛异常，按 0 段处理，判为"不是更新"，宁可不弹也不误导下载
         assertFalse(UpdateManager.compareVersionNames("", "1.12.3") > 0);
         assertFalse(UpdateManager.compareVersionNames(null, "1.12.3") > 0);
-        assertFalse(UpdateManager.compareVersionNames("影梭最新版", "1.12.3") > 0);
+        assertFalse(UpdateManager.compareVersionNames("任意门最新版", "1.12.3") > 0);
     }
 
     @Test

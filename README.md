@@ -4,9 +4,9 @@
 
 <div align="center">
 
-### 影梭
+### 任意门
 
-影梭 - 用于 Android 12+ 的无需 ROOT 权限的虚拟定位 APP
+任意门 - 用于 Android 12+ 的无需 ROOT 权限的虚拟定位 APP
 
 简体中文 | [English](./README.en.md)
 
@@ -14,7 +14,7 @@
 
 ## 简介
 
-&emsp;&emsp;影梭是 [ZCShou/GoGoGo](https://github.com/ZCShou/GoGoGo) 的二次开发分支,基于 Android 调试 API(TestProvider)+ 高德 LBS SDK 实现的安卓定位修改工具:在地图上选定一个位置(搜索、点选、长按或手动输入坐标),一键即可将系统定位瞬移到该点,无需 ROOT 权限。只做静态瞬移,不模拟移动轨迹。
+&emsp;&emsp;任意门是 [ZCShou/GoGoGo](https://github.com/ZCShou/GoGoGo) 的二次开发分支,基于 Android 调试 API(TestProvider)+ 高德 LBS SDK 实现的安卓定位修改工具:在地图上选定一个位置(搜索、点选、长按或手动输入坐标),一键即可将系统定位瞬移到该点,无需 ROOT 权限。只做静态瞬移,不模拟移动轨迹。
 
 &emsp;&emsp;默认**不读取真实位置**——选点只来自搜索/地图选点/手动输入;如需真实位置蓝点辅助,可在设置中开启"定位自己的位置"。
 

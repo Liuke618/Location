@@ -2,7 +2,7 @@
 
 ## 仓库用途
 
-GoGoGo(影梭)——Android 免 Root 虚拟定位 App(GPL-3.0,仅 arm64-v8a),基于 TestProvider 调试 API + 高德 LBS SDK(Maven 组合包 3dmap-location-search)。
+GoGoGo(任意门)——Android 免 Root 虚拟定位 App(GPL-3.0,仅 arm64-v8a),基于 TestProvider 调试 API + 高德 LBS SDK(Maven 组合包 3dmap-location-search)。
 
 **功能**:地图选点模拟定位(静态选点后一键瞬移,无移动模拟;真实定位受设置项"定位自己的位置"控制,默认关=不激活定位图层不读真实位置,仅搜索/选点);POI 搜索 + 逆地理;定位/搜索历史(SQLite);收藏定位地址(独立表,不参与历史有效期清理,可设默认收藏用于冷启动/未选点 GO 兜底);应用内更新检查/下载/安装(GitHub releases);欢迎页协议与隐私同意流程。
 

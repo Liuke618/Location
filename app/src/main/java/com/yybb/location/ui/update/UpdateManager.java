@@ -59,7 +59,7 @@ public class UpdateManager {
      * 更新信息值对象：原对话框组装内逐键 getString 读取结果的收编载体。
      */
     public static class UpdateInfo {
-        public String name;          // release 名称（如 "影梭 v1.2.3"，仅用于对话框标题）
+        public String name;          // release 名称（如 "任意门 v1.2.3"，仅用于对话框标题）
         public String tagName;       // release 标签（版本判断依据，取代原先的 name.contains 写法）
         public String createdAt;     // 发布时间（原 created_at）
         public String commitish;     // 目标分支（原 target_commitish）

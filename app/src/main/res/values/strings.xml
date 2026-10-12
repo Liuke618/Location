@@ -1,10 +1,10 @@
 <resources>
-    <string name="app_name">影梭</string>
+    <string name="app_name">任意门</string>
     <string name="app_settings">设置</string>
     <string name="app_history">历史记录</string>
     <string name="app_author">ZCShou</string>
     <string name="app_statement">仅供学习使用，否则后果自负！</string>
-    <string name="app_service_tips">影梭服务正在运行中</string>
+    <string name="app_service_tips">任意门服务正在运行中</string>
     <string name="app_agreement">用户协议</string>
     <string name="app_agreement_content">"1. 本软件专为学习 Android 开发使用，不会收集任何用户数据。"
     "严禁利用本软件侵犯他人隐私权或者用于游戏牟利，如软件使用者不能遵守此规定， 请立即删除。"
@@ -94,6 +94,13 @@
     <string name="favorite_default_ok">已设为默认收藏</string>
     <string name="favorite_default_cleared">已取消默认收藏</string>
     <string name="favorite_default_failed">设置默认收藏失败</string>
+    <string name="favorite_add">添加</string>
+    <string name="favorite_add_title">手动添加收藏</string>
+    <string name="favorite_add_name_hint">名称</string>
+    <string name="favorite_add_default_name">手动地点</string>
+    <string name="favorite_add_save">保存</string>
+    <string name="favorite_add_ok">已添加到收藏！</string>
+    <string name="favorite_add_error">添加收藏失败</string>
 
     <!-- 导航页 -->
     <string name="nav_drawer_open">打开导航菜单</string>
@@ -128,7 +135,7 @@
     <string name="update_title">新版本可用</string>
     <string name="update_downloading">升级文件下载中。。。</string>
     <string name="update_verify_failed">更新包校验未通过，已取消安装</string>
-    <string name="update_last">恭喜，影梭已是最新版</string>
+    <string name="update_last">恭喜，任意门已是最新版</string>
     <string name="update_check_failed">检查更新失败，请稍后重试</string>
     <string name="update_download">立即下载</string>
     <string name="update_ignore">忽略一次</string>

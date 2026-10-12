@@ -4,7 +4,18 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- 波纹属背景层可全幅绘制,裁切由遮罩决定;前景钉须收敛在自适应图标安全区(中央 66dp 圆)内 -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M 0 0 H 108 V 108 H 0 Z" />
+        android:fillColor="#FAFBFD"
+        android:pathData="M0,0h108v108h-108z"/>
+    <path
+        android:strokeColor="#EA4335"
+        android:strokeAlpha="0.28"
+        android:strokeWidth="2.8"
+        android:pathData="M30.4,44.1a23.6,23.6 0 1,0 47.2,0a23.6,23.6 0 1,0 -47.2,0z"/>
+    <path
+        android:strokeColor="#EA4335"
+        android:strokeAlpha="0.13"
+        android:strokeWidth="2.8"
+        android:pathData="M20.25,44.1a33.75,33.75 0 1,0 67.5,0a33.75,33.75 0 1,0 -67.5,0z"/>
 </vector>
