@@ -53,3 +53,6 @@ captures/
 # Google Services (e.g. APIs or Firebase)
 google-services.json
 .worktrees
+
+# Superpowers brainstorming companion
+.superpowers/
