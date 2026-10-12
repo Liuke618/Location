@@ -196,6 +196,59 @@ public class GoUtils {
         return Double.isFinite(parsed) ? parsed : fallback;
     }
 
+    /*============================== 手动输入经纬度（收藏页添加） ==============================*/
+
+    /** 校验结果码：经纬度合法 */
+    public static final int MANUAL_LATLNG_OK = 0;
+    /** 校验结果码：空/非数字/非有限值 */
+    public static final int MANUAL_LATLNG_ERR_MALFORMED = 1;
+    /** 校验结果码：经度超出 [-180,180] */
+    public static final int MANUAL_LATLNG_ERR_LONGITUDE = 2;
+    /** 校验结果码：纬度超出 [-90,90] */
+    public static final int MANUAL_LATLNG_ERR_LATITUDE = 3;
+
+    /**
+     * 校验手动输入的经纬度文本（收藏页添加对话框用）。
+     * 空/非数字/非有限值按"输入非法"处理（复用 parseDoubleOrDefault 的 NaN 收敛）；
+     * 越界时经度先行，与主界面手动输入对话框的提示顺序一致。
+     */
+    public static int validateManualLatLng(String lngText, String latText) {
+        if (isBlank(lngText) || isBlank(latText)) {
+            return MANUAL_LATLNG_ERR_MALFORMED;
+        }
+
+        double lng = parseDoubleOrDefault(lngText, Double.NaN);
+        double lat = parseDoubleOrDefault(latText, Double.NaN);
+        if (Double.isNaN(lng) || Double.isNaN(lat)) {
+            return MANUAL_LATLNG_ERR_MALFORMED;
+        }
+        if (lng > 180.0 || lng < -180.0) {
+            return MANUAL_LATLNG_ERR_LONGITUDE;
+        }
+        if (lat > 90.0 || lat < -90.0) {
+            return MANUAL_LATLNG_ERR_LATITUDE;
+        }
+        return MANUAL_LATLNG_OK;
+    }
+
+    /**
+     * 把通过 validateManualLatLng 的输入坐标换算为落库四元组
+     * {经度WGS84, 纬度WGS84, 经度GCJ02, 纬度GCJ02}；坐标系转换只经 MapUtils。
+     */
+    public static double[] convertManualLatLng(double lng, double lat, boolean inputIsWgs84) {
+        if (inputIsWgs84) {
+            double[] gcj = MapUtils.wgs2gcj(lng, lat);
+            return new double[]{lng, lat, gcj[0], gcj[1]};
+        }
+
+        double[] wgs = MapUtils.gcj02towgs84(lng, lat);
+        return new double[]{wgs[0], wgs[1], lng, lat};
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
     //提醒开启位置模拟的弹框
     public static  void showEnableMockLocationDialog(Context context) {
         new AlertDialog.Builder(context)

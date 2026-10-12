@@ -11,6 +11,7 @@ import android.text.InputType;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -19,6 +20,7 @@ import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.EditText;
 import android.widget.PopupMenu;
+import android.widget.RadioButton;
 import android.view.Gravity;
 
 import java.math.BigDecimal;
@@ -39,7 +41,7 @@ import com.yybb.location.ui.map.MainActivity;
 
 /**
  * 收藏页：经 HistoryRepository 展示收藏地点列表（收藏不参与历史有效期清理），
- * 支持搜索过滤、单条改名/删除与整表清空；点击行把该点回填地图选中，
+ * 支持搜索过滤、手动添加、单条改名/删除与整表清空；点击行把该点回填地图选中，
  * 传送前置路径与历史页一致（随机偏移设置同样生效，共用 GoUtils.randomOffset）。
  */
 public class FavoriteActivity extends BaseActivity {
@@ -94,6 +96,9 @@ public class FavoriteActivity extends BaseActivity {
 
         if (id == android.R.id.home) {
             this.finish(); // back button
+            return true;
+        } else if (id == R.id.action_add) {
+            showAddFavoriteDialog();
             return true;
         } else if (id ==  R.id.action_clear) {
             new AlertDialog.Builder(FavoriteActivity.this)
@@ -348,6 +353,70 @@ public class FavoriteActivity extends BaseActivity {
         builder.setNegativeButton("取消", null);
 
         builder.show();
+    }
+
+    /*============================== 手动添加 ==============================*/
+
+    // 手动添加收藏对话框：名称可空(回退默认名)，经纬度按所选坐标系经 MapUtils 换算成双坐标落库
+    // (同 WGS84 坐标先删后插，重复添加同一点=改名)；错误提示分支与主界面手动输入对话框一致
+    private void showAddFavoriteDialog() {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_favorite_add, null);
+        EditText nameInput = view.findViewById(R.id.favorite_add_name);
+        EditText lngInput = view.findViewById(R.id.favorite_add_longitude);
+        EditText latInput = view.findViewById(R.id.favorite_add_latitude);
+        RadioButton wgsRadio = view.findViewById(R.id.favorite_add_wgs);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(getResources().getString(R.string.favorite_add_title))
+                .setView(view)
+                .show();
+
+        view.findViewById(R.id.favorite_add_save).setOnClickListener(v -> {
+            String lngText = lngInput.getText().toString();
+            String latText = latInput.getText().toString();
+            int err = GoUtils.validateManualLatLng(lngText, latText);
+            if (err == GoUtils.MANUAL_LATLNG_ERR_MALFORMED) {
+                GoUtils.DisplayToast(this, getResources().getString(R.string.app_error_input));
+                return;
+            } else if (err == GoUtils.MANUAL_LATLNG_ERR_LONGITUDE) {
+                GoUtils.DisplayToast(this, getResources().getString(R.string.app_error_longitude));
+                return;
+            } else if (err == GoUtils.MANUAL_LATLNG_ERR_LATITUDE) {
+                GoUtils.DisplayToast(this, getResources().getString(R.string.app_error_latitude));
+                return;
+            }
+
+            double[] quad = GoUtils.convertManualLatLng(
+                    GoUtils.parseDoubleOrDefault(lngText, Double.NaN),
+                    GoUtils.parseDoubleOrDefault(latText, Double.NaN),
+                    wgsRadio.isChecked());
+            String name = nameInput.getText().toString().trim();
+            if (name.isEmpty()) {
+                name = getResources().getString(R.string.favorite_add_default_name);
+            }
+
+            if (addFavoriteRecord(name, quad)) {
+                GoUtils.DisplayToast(this, getResources().getString(R.string.favorite_add_ok));
+                dialog.dismiss();
+                updateRecordList();
+            } else {
+                GoUtils.DisplayToast(this, getResources().getString(R.string.favorite_add_error));
+            }
+        });
+
+        view.findViewById(R.id.favorite_add_cancel).setOnClickListener(v -> dialog.dismiss());
+    }
+
+    // 落库字段与 MainActivity.addFavoriteRow 逐字段对应(WGS84 经纬度、秒级时间戳、GCJ02 原坐标)
+    private boolean addFavoriteRecord(String name, double[] quad) {
+        try {
+            LocationRow favoriteRow = new LocationRow(name, String.valueOf(quad[0]), String.valueOf(quad[1]),
+                    System.currentTimeMillis() / 1000, Double.toString(quad[2]), Double.toString(quad[3]));
+            return mHistoryRepository.addFavoriteRow(favoriteRow);
+        } catch (Exception e) {
+            XLog.e("FAVORITE: ERROR - addFavoriteRecord");
+            return false;
+        }
     }
 
     private void initRecordListView() {
