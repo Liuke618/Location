@@ -9,6 +9,7 @@ import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.SwitchPreferenceCompat;
 
 import com.elvishew.xlog.XLog;
+import com.yybb.location.utils.AmapUtils;
 import com.yybb.location.utils.GoUtils;
 import com.yybb.location.R;
 
@@ -48,6 +49,18 @@ public class FragmentSettings extends PreferenceFragmentCompat {
 
         EditTextPreference pfLonOffset = findPreference("setting_lon_max_offset");
         setupDecimalEditTextPreference(pfLonOffset);
+
+        // 高德 API Key：摘要只显示配置状态、不回显明文；允许留空(回落内置 Key)，不做非空校验
+        EditTextPreference pfAmapKey = findPreference(AmapUtils.PREF_KEY_AMAP_API_KEY);
+        if (pfAmapKey != null) {
+            pfAmapKey.setSummaryProvider((Preference.SummaryProvider<EditTextPreference>) pref -> {
+                String value = pref.getText();
+                boolean custom = value != null && !value.trim().isEmpty();
+                return getString(custom
+                        ? R.string.setting_amap_api_key_set
+                        : R.string.setting_amap_api_key_unset);
+            });
+        }
 
         SwitchPreferenceCompat pLog = findPreference("setting_log_off");
         if (pLog != null) {

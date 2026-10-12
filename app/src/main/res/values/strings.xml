@@ -61,6 +61,11 @@
     <string name="setting_random_offset_default">10.0</string>
     <string name="setting_lat_max_offset">经度最大偏移距离(米)</string>
     <string name="setting_lon_max_offset">纬度最大偏移距离(米)</string>
+    <!-- 高德 API Key 运行时配置 -->
+    <string name="setting_amap_api_key">高德 API Key</string>
+    <string name="setting_amap_api_key_set">已自定义 Key</string>
+    <string name="setting_amap_api_key_unset">使用内置 Key</string>
+    <string name="setting_amap_api_key_dialog">填入在高德开放平台注册的 Android Key。该 Key 须绑定包名 com.yybb.location 与当前安装包的签名 SHA1（自编译请绑定自己的签名）；留空使用构建内置 Key，保存后重启应用生效。</string>
     <!-- 地图定位相关参数 -->
     <string name="setting_group_map_location">地图定位</string>
     <string name="setting_locate_self">定位自己的位置</string>

@@ -3,6 +3,8 @@ package com.yybb.location;
 import android.app.Application;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 
 import androidx.preference.PreferenceManager;
 
@@ -20,6 +22,7 @@ import com.elvishew.xlog.printer.file.FilePrinter;
 import com.elvishew.xlog.printer.file.backup.FileSizeBackupStrategy2;
 import com.elvishew.xlog.printer.file.clean.FileLastModifiedCleanStrategy;
 import com.elvishew.xlog.printer.file.naming.ChangelessFileNameGenerator;
+import com.yybb.location.utils.AmapUtils;
 
 import java.io.File;
 
@@ -27,6 +30,7 @@ import java.io.File;
  * Application 入口：初始化 XLog（单文件轮转+备份上限）、创建组合根 AppContainer、启用 Material 动态配色，
  * 并门控高德隐私合规——三套接口（地图/定位/搜索）的 updatePrivacyShow 无条件下发，
  * updatePrivacyAgree 仅在用户同意自有协议/隐私政策后经 applyAmapPrivacyAgreement 下发，同意位持久化于 SharedPreferences。
+ * 同时经三套 setter 注入生效 API key：设置页自定义优先，回落构建期清单值。
  */
 public class GoApplication extends Application {
     public static final String APP_NAME = "GoGoGo";
@@ -62,6 +66,7 @@ public class GoApplication extends Application {
         AMapLocationClient.updatePrivacyShow(this, true, true);
         ServiceSettings.getInstance().updatePrivacyShow(this, true, true);
         applyAmapPrivacyAgreement(this);
+        applyAmapApiKey();
 
         mAppContainer = new AppContainer(this);
 
@@ -88,6 +93,42 @@ public class GoApplication extends Application {
         MapsInitializer.updatePrivacyAgree(context, true);
         AMapLocationClient.updatePrivacyAgree(context, true);
         ServiceSettings.getInstance().updatePrivacyAgree(context, true);
+    }
+
+    /**
+     * 运行时向三套高德 SDK（地图/定位/搜索）下发生效 API key：设置页自定义 key 优先，
+     * 否则回落构建期经 manifest 注入的内置值。必须在任何 SDK client 创建前调用；
+     * 修改设置后下次进程启动生效（与"关闭日志"开关同款语义）。
+     * SDK 侧取值优先级（反编译组合包 AppInfo 核实）：运行时 setter 非空值 > manifest meta-data > 内置 k.store，
+     * 因此未配置时经 setter 下发清单值，与"SDK 自读清单"行为一致。
+     */
+    private void applyAmapApiKey() {
+        String userKey = PreferenceManager.getDefaultSharedPreferences(this)
+                .getString(AmapUtils.PREF_KEY_AMAP_API_KEY, "");
+        String effective = AmapUtils.resolveEffectiveApiKey(userKey, readManifestApiKey());
+        if (effective.isEmpty()) {
+            // 与构建期 key 缺失时一致：不下发，SDK 按无 key 处理（地图/定位/搜索运行时报错，构建不拦）
+            return;
+        }
+        MapsInitializer.setApiKey(effective);
+        AMapLocationClient.setApiKey(effective);
+        ServiceSettings.getInstance().setApiKey(effective);
+    }
+
+    /**
+     * 读取构建期 placeholder 注入到清单 meta-data 的内置 key；读取失败一律按缺失处理。
+     */
+    private String readManifestApiKey() {
+        try {
+            ApplicationInfo info = getPackageManager()
+                    .getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA);
+            if (info.metaData == null) {
+                return "";
+            }
+            return info.metaData.getString(AmapUtils.META_KEY_AMAP_API_KEY, "");
+        } catch (PackageManager.NameNotFoundException e) {
+            return "";
+        }
     }
 
     /**

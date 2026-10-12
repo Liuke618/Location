@@ -49,6 +49,11 @@
             app:summary="@string/setting_locate_self_summary"
             app:defaultValue="false"
             app:iconSpaceReserved="false"/>
+        <EditTextPreference
+            app:key="setting_amap_api_key"
+            app:title="@string/setting_amap_api_key"
+            app:dialogMessage="@string/setting_amap_api_key_dialog"
+            app:iconSpaceReserved="false"/>
     </PreferenceCategory>
 
     <PreferenceCategory

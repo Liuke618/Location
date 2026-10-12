@@ -30,6 +30,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 **目标**:用户必须先同意自有《用户协议》与《隐私政策》,高德三套 SDK(地图/定位/搜索)才获得隐私授权;不同意则进不了主界面,任何 LBS 能力都不可达。
 
 - **GoApplication.onCreate**:`updatePrivacyShow` 对地图(`MapsInitializer`)、定位(`AMapLocationClient`)、搜索(`ServiceSettings`)三套接口**无条件下发**;`updatePrivacyAgree` 只按持久化同意位决定(经 `applyAmapPrivacyAgreement`,两键 `KEY_ACCEPT_AGREEMENT`/`KEY_ACCEPT_PRIVACY` 同真才下发)。三套接口互相独立,漏调对应能力运行时报错(搜索=1907)。
+之后经 `applyAmapApiKey` 向三套 SDK setter 注入生效 API key:设置页 `setting_amap_api_key` 优先,否则回落构建期注入的清单值,再经 `resolveEffectiveApiKey`(AmapUtils,纯函数有单测)解析;两者皆空则不下发(SDK 按无 key 处理)。SDK 侧优先级=运行时 setter 非空值 > manifest meta-data > 内置 k.store(反编译组合包 AppInfo 核实),故未自定义时行为与"SDK 自读清单"完全一致。
 - **WelcomeActivity 流程**:
   1. 读同意位,已双双同意则直接勾选并跳过弹窗;
   2. 勾选复选框时若未同意完,自动**依序**弹出协议弹窗→隐私弹窗(均不可点外部取消);取消勾选把两个同意位重置为 false;
@@ -134,6 +135,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 | 位置偏移 | `setting_random_offset` | 随机偏移开关(默认关) | 历史/收藏页点击行 |
 | 位置偏移 | `setting_lat_max_offset` / `setting_lon_max_offset` | 纬/经度偏移上限米(默认 10) | 同上 |
 | 地图定位 | `setting_locate_self` | 定位自己的位置开关(默认关) | MainActivity.onResume(定位图层启停 + 回到当前位置按钮显隐,见 §4) |
+| 地图定位 | `setting_amap_api_key` | 高德 API Key 自定义(默认空=用构建内置;**重启生效**) | GoApplication.applyAmapApiKey |
 | 日志 | `setting_log_off` | 关闭日志写入(**下次进程启动生效**) | GoApplication.initXlog |
 | 日志 | `setting_history_expiration` | 历史有效期天数(默认 7) | 历史页过期清理 |
 | 关于 | `setting_version` / `setting_author` | 版本号(动态)/作者 | 展示 |
