@@ -64,14 +64,20 @@ public class PoiSearchHelper {
     /**
      * 下发建议查询(原 onQueryTextSubmit / onQueryTextChange 中的 requestSuggestion 触发点;
      * 城市取自 MapState.getCurrentCity(),由调用方传入;try/catch 与 UI 处理保留在 MainActivity)
+     *
+     * @param notifyUnavailable true=无结果/失败时回调 onSuggestionUnavailable(提交搜索路径,
+     *                          Activity 弹"没有匹配结果"提示);false=静默(输入过程路径,中间态
+     *                          查询本来就可能无结果,逐键弹窗会干扰打字)
      */
-    public void requestSuggestions(String query, String city) {
+    public void requestSuggestions(String query, String city, boolean notifyUnavailable) {
         InputtipsQuery inputtipsQuery = new InputtipsQuery(query, city == null ? "" : city);
         Inputtips inputtips = new Inputtips(mContext, inputtipsQuery);
         inputtips.setInputtipsListener((tips, rCode) -> {
             //rCode==1000 为高德统一成功码
             if (rCode != 1000 || tips == null || tips.isEmpty()) {
-                mListener.onSuggestionUnavailable();
+                if (notifyUnavailable) {
+                    mListener.onSuggestionUnavailable();
+                }
             } else {
                 mListener.onSuggestionResult(getTipList(tips));
             }

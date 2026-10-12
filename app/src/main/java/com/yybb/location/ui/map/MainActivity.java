@@ -298,7 +298,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
             public boolean onQueryTextSubmit(String query) {
                 try {
                     //查询下发与关键字保存收编于 PoiSearchHelper（try/catch 与 UI 处理保留在此，异常语义不变）
-                    mPoiSearchHelper.requestSuggestions(query, mMapState.getCurrentCity());
+                    mPoiSearchHelper.requestSuggestions(query, mMapState.getCurrentCity(), true);
                     mPoiSearchHelper.saveQueryHistory(query);
                     mMapController.clearOverlays();
                     mSearchLayout.setVisibility(View.INVISIBLE);
@@ -319,7 +319,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 if (newText != null && !newText.isEmpty()) {
                     try {
                         //查询下发收编于 PoiSearchHelper
-                        mPoiSearchHelper.requestSuggestions(newText, mMapState.getCurrentCity());
+                        mPoiSearchHelper.requestSuggestions(newText, mMapState.getCurrentCity(), false);
                     } catch (Exception e) {
                         GoUtils.DisplayToast(MainActivity.this, getResources().getString(R.string.app_error_search));
                         XLog.d(getResources().getString(R.string.app_error_search));
