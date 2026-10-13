@@ -56,3 +56,6 @@ google-services.json
 
 # Superpowers brainstorming companion
 .superpowers/
+
+# macOS metadata
+.DS_Store
