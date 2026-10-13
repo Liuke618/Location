@@ -120,7 +120,7 @@ android {
     }
 }
 
-def apkBaseName = "Go_${android.defaultConfig.versionName}_arm64-v8a"
+def apkBaseName = "Location_${android.defaultConfig.versionName}_arm64-v8a"
 
 androidComponents {
     // Groovy DSL 需用 onVariants(selector, action) 两参形式(单闭包形式仅 Kotlin DSL 可用)
