@@ -36,12 +36,8 @@ import com.yybb.location.R;
  */
 public class ServiceGo extends Service {
     // 定位相关变量
-    public static final double DEFAULT_LAT = 36.667662;
-    public static final double DEFAULT_LNG = 117.027707;
-    public static final double DEFAULT_ALT = 55.0D;
-    private double mCurLat = DEFAULT_LAT;
-    private double mCurLng = DEFAULT_LNG;
-    private double mCurAlt = DEFAULT_ALT;
+    // 默认点(济南)与三轴的可变性收在 PositionPublisher:供给线程一次读取必须拿到同一次发布的三轴
+    private final PositionPublisher mPosition = new PositionPublisher();
     private static final int HANDLER_MSG_ID = 0;
     private static final String SERVICE_GO_HANDLER_NAME = "ServiceGoLocation";
     private LocationManager mLocManager;
@@ -81,10 +77,10 @@ public class ServiceGo extends Service {
             return;
         }
 
-        removeTestProviderNetwork();
+        removeTestProvider(LocationManager.NETWORK_PROVIDER);
         addTestProviderNetwork();
 
-        removeTestProviderGPS();
+        removeTestProvider(LocationManager.GPS_PROVIDER);
         addTestProviderGPS();
 
         initGoLocation();
@@ -95,9 +91,10 @@ public class ServiceGo extends Service {
         // 进程被回收后系统重启服务时 Intent 为 null，原先直接解引用会 NPE 并进入"重启→崩溃"循环。
         // 刻意返回 START_NOT_STICKY：不自动恢复模拟，避免无人知情地持续供给假定位。
         if (intent != null) {
-            mCurLng = intent.getDoubleExtra(ServiceGoController.LNG_MSG_ID, DEFAULT_LNG);
-            mCurLat = intent.getDoubleExtra(ServiceGoController.LAT_MSG_ID, DEFAULT_LAT);
-            mCurAlt = intent.getDoubleExtra(ServiceGoController.ALT_MSG_ID, DEFAULT_ALT);
+            mPosition.publish(
+                    intent.getDoubleExtra(ServiceGoController.LNG_MSG_ID, PositionPublisher.DEFAULT_LNG),
+                    intent.getDoubleExtra(ServiceGoController.LAT_MSG_ID, PositionPublisher.DEFAULT_LAT),
+                    intent.getDoubleExtra(ServiceGoController.ALT_MSG_ID, PositionPublisher.DEFAULT_ALT));
         }
 
         return START_NOT_STICKY;
@@ -115,8 +112,8 @@ public class ServiceGo extends Service {
         }
 
         if (mLocManager != null) {
-            removeTestProviderNetwork();
-            removeTestProviderGPS();
+            removeTestProvider(LocationManager.NETWORK_PROVIDER);
+            removeTestProvider(LocationManager.GPS_PROVIDER);
         }
 
         stopForeground(STOP_FOREGROUND_REMOVE);
@@ -176,14 +173,30 @@ public class ServiceGo extends Service {
         mLocHandler.sendEmptyMessage(HANDLER_MSG_ID);
     }
 
-    private void removeTestProviderGPS() {
+    /**
+     * 停用并注销指定 provider 的模拟位置。注销不再以"provider 当前是否启用"为前置条件：
+     * 进程被强杀后留下的是"已注册但未启用"的 provider，旧写法（整体关在 isProviderEnabled 里）
+     * 永远删不掉，卸载本应用后系统里仍挂着假 provider。
+     * 两步各自成 try——停用失败不应挡住注销尝试；provider 本就不存在是首次启动的正常情形，
+     * 按 debug 记账以免污染作为唯一反馈通道的日志。
+     */
+    private void removeTestProvider(String provider) {
         try {
-            if (mLocManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                mLocManager.setTestProviderEnabled(LocationManager.GPS_PROVIDER, false);
-                mLocManager.removeTestProvider(LocationManager.GPS_PROVIDER);
-            }
+            mLocManager.setTestProviderEnabled(provider, false);
+        } catch (SecurityException e) {
+            XLog.e("SERVICEGO: ERROR - disableTestProvider " + provider + "(无模拟位置权限)");
         } catch (Exception e) {
-            XLog.e("SERVICEGO: ERROR - removeTestProviderGPS");
+            XLog.d("SERVICEGO: 停用 " + provider + " 测试 provider 未生效");
+        }
+
+        try {
+            mLocManager.removeTestProvider(provider);
+        } catch (SecurityException e) {
+            XLog.e("SERVICEGO: ERROR - removeTestProvider " + provider + "(无模拟位置权限)");
+        } catch (IllegalArgumentException e) {
+            XLog.d("SERVICEGO: " + provider + " 测试 provider 未注册，无需注销");
+        } catch (Exception e) {
+            XLog.e("SERVICEGO: ERROR - removeTestProvider " + provider);
         }
     }
 
@@ -215,12 +228,14 @@ public class ServiceGo extends Service {
 
     private void setLocationGPS() {
         try {
+            // 一次供给只取一次快照，三轴必然同源
+            PositionPublisher.Snapshot target = mPosition.current();
             // 尽可能模拟真实的 GPS 数据
             Location loc = new Location(LocationManager.GPS_PROVIDER);
             loc.setAccuracy(1.0f);                       // 原 Criteria.ACCURACY_FINE（值=1 米），该常量 API 36 起弃用，按原值内联保持行为不变
-            loc.setAltitude(mCurAlt);                     // 设置高度，在 WGS 84 参考坐标系中的米
-            loc.setLatitude(mCurLat);                   // 纬度（度）
-            loc.setLongitude(mCurLng);                  // 经度（度）
+            loc.setAltitude(target.alt);                     // 设置高度，在 WGS 84 参考坐标系中的米
+            loc.setLatitude(target.lat);                   // 纬度（度）
+            loc.setLongitude(target.lng);                  // 经度（度）
             loc.setTime(System.currentTimeMillis());    // 本地时间
             loc.setElapsedRealtimeNanos(SystemClock.elapsedRealtimeNanos());
             Bundle bundle = new Bundle();
@@ -230,17 +245,6 @@ public class ServiceGo extends Service {
             mLocManager.setTestProviderLocation(LocationManager.GPS_PROVIDER, loc);
         } catch (Exception e) {
             XLog.e("SERVICEGO: ERROR - setLocationGPS");
-        }
-    }
-
-    private void removeTestProviderNetwork() {
-        try {
-            if (mLocManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                mLocManager.setTestProviderEnabled(LocationManager.NETWORK_PROVIDER, false);
-                mLocManager.removeTestProvider(LocationManager.NETWORK_PROVIDER);
-            }
-        } catch (Exception e) {
-            XLog.e("SERVICEGO: ERROR - removeTestProviderNetwork");
         }
     }
 
@@ -272,12 +276,14 @@ public class ServiceGo extends Service {
 
     private void setLocationNetwork() {
         try {
+            // 一次供给只取一次快照，三轴必然同源
+            PositionPublisher.Snapshot target = mPosition.current();
             // 尽可能模拟真实的 NETWORK 数据
             Location loc = new Location(LocationManager.NETWORK_PROVIDER);
             loc.setAccuracy(2.0f);                       // 原 Criteria.ACCURACY_COARSE（值=2 米），该常量 API 36 起弃用，按原值内联保持行为不变
-            loc.setAltitude(mCurAlt);                     // 设置高度，在 WGS 84 参考坐标系中的米
-            loc.setLatitude(mCurLat);                   // 纬度（度）
-            loc.setLongitude(mCurLng);                  // 经度（度）
+            loc.setAltitude(target.alt);                     // 设置高度，在 WGS 84 参考坐标系中的米
+            loc.setLatitude(target.lat);                   // 纬度（度）
+            loc.setLongitude(target.lng);                  // 经度（度）
             loc.setTime(System.currentTimeMillis());    // 本地时间
             loc.setElapsedRealtimeNanos(SystemClock.elapsedRealtimeNanos());
 
@@ -296,9 +302,7 @@ public class ServiceGo extends Service {
             }
 
             mLocHandler.removeMessages(HANDLER_MSG_ID);
-            mCurLng = lng;
-            mCurLat = lat;
-            mCurAlt = alt;
+            mPosition.publish(lng, lat, alt);
             mLocHandler.sendEmptyMessage(HANDLER_MSG_ID);
             return true;
         }
