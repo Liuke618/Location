@@ -30,7 +30,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 **目标**:用户必须先同意自有《用户协议》与《隐私政策》,高德三套 SDK(地图/定位/搜索)才获得隐私授权;不同意则进不了主界面,任何 LBS 能力都不可达。
 
 - **GoApplication.onCreate**:`updatePrivacyShow` 对地图(`MapsInitializer`)、定位(`AMapLocationClient`)、搜索(`ServiceSettings`)三套接口**无条件下发**;`updatePrivacyAgree` 只按持久化同意位决定(经 `applyAmapPrivacyAgreement`,两键 `KEY_ACCEPT_AGREEMENT`/`KEY_ACCEPT_PRIVACY` 同真才下发)。三套接口互相独立,漏调对应能力运行时报错(搜索=1907)。
-之后经 `applyAmapApiKey` 向三套 SDK setter 注入生效 API key:设置页 `setting_amap_api_key` 优先,否则回落构建期注入的清单值,再经 `resolveEffectiveApiKey`(AmapUtils,纯函数有单测)解析;两者皆空则不下发(SDK 按无 key 处理)。SDK 侧优先级=运行时 setter 非空值 > manifest meta-data > 内置 k.store(反编译组合包 AppInfo 核实),故未自定义时行为与"SDK 自读清单"完全一致。
+之后经 `applyAmapApiKey` 向三套 SDK setter 注入生效 API key:设置页 `setting_amap_api_key` 优先,否则回落构建期注入的清单值,统一经 `AmapUtils.getEffectiveApiKey`(读默认偏好+清单 meta-data,内部走纯函数 `resolveEffectiveApiKey`,有单测;与主界面缺失检测同一事实源)解析;两者皆空则不下发(SDK 按无 key 处理)。SDK 侧优先级=运行时 setter 非空值 > manifest meta-data > 内置 k.store(反编译组合包 AppInfo 核实),故未自定义时行为与"SDK 自读清单"完全一致。
 - **再次启动早退**:onCreate 在 inflate 前读同意位与定位权限,两同意位均真**且** FINE/COARSE 仍在授 → 直接 startActivity(MainActivity) 并 finish,不再展示欢迎页;权限被系统回收则回落欢迎页,由既有流程自动补弹权限申请。`setDefaultValues` 在早退判断前执行,两条路径都生效;网络/GPS 校验仅在欢迎页"进入应用"路径生效,早退路径不阻断(离线进主界面=地图空白,与进入后断网一致)。
 - **WelcomeActivity 流程**:
   1. 读同意位,已双双同意则直接勾选并跳过弹窗;
@@ -58,6 +58,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
   - **传送**:等价于 GO 按钮的 `doGoLocation`;
   - **★收藏**:落收藏表(见 §8)。
 - **冷启动恢复**(`onCreate`,仅 `savedInstanceState == null` 时):**默认收藏优先**——已设默认收藏则直接选中该点上标记;否则读偏好 `setting_last_lat/lng`(上次模拟位置,GCJ02),选中并移相机。首次使用无存值则保持地图默认位置("定位自己的位置"默认关,不再等待首次定位自动缩放;开启开关后随首次定位缩放)。V1 老版本的"上次位置"是 BD09,经 `setting_coord_migrated` 标记一次性迁为 GCJ02。
+- **高德 Key 缺失引导**(`onCreate` 末尾判定一次):生效 key(`AmapUtils.getEffectiveApiKey`,设置自定义→清单内置)为空时弹窗——"去设置"跳 `SettingsActivity` 并经 `EXTRA_ANCHOR_KEY` 锚定滚动到 `setting_amap_api_key` 项,"如何获取"弹申请指引(`AmapKeyGuide`:步骤文案动态带入包名与当前安装包签名 SHA1,支持跳高德控制台、复制 SHA1),"稍后"关闭不打断使用,未配置则下次进主界面仍提示。key 下发在 Application 启动期,`onResume` 检测到设置页返回后已补配则 Toast"重启生效"(仅提示一次)。
 - **GO 按钮状态机**(`doGoLocation`,信息窗"传送"同路径):
   1. 前置校验:网络可用 → GPS 开启(否则分别提示/弹引导);
   2. **未在模拟**:先探测"开发者选项→模拟位置信息应用"授权(`GoUtils.isAllowMockLocation`,实际 addTestProvider 试探),未授权弹引导框;选中点为空时尝试选**默认收藏**,仍无则提示"请先点击地图位置或者搜索位置";然后取选中点 `gcj02towgs84` 换算 + 偏好海拔(`setting_altitude`,非法回退 55.0)调用 `start()`——**start 返回 false(权限缺失/服务未起)时不动任何界面状态**,避免制造"已在模拟"假象;成功后:落定位历史(失败仅日志)、存上次位置、清覆盖物与选中点、按钮换"传送"图标,若 WiFi 开着再弹"定位闪回"警告;
@@ -137,6 +138,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 | 位置偏移 | `setting_lat_max_offset` / `setting_lon_max_offset` | 纬/经度偏移上限米(默认 10) | 同上 |
 | 地图定位 | `setting_locate_self` | 定位自己的位置开关(默认关) | MainActivity.onResume(定位图层启停 + 回到当前位置按钮显隐,见 §4) |
 | 地图定位 | `setting_amap_api_key` | 高德 API Key 自定义(默认空=用构建内置;**重启生效**) | GoApplication.applyAmapApiKey |
+| 地图定位 | `setting_amap_api_key_guide` | "如何获取高德 Key"入口(**非持久项**,弹 `AmapKeyGuide` 申请指引:步骤+包名+签名 SHA1,可跳控制台/复制 SHA1) | — |
 | 日志 | `setting_log_off` | 关闭日志写入(**下次进程启动生效**) | GoApplication.initXlog |
 | 日志 | `setting_history_expiration` | 历史有效期天数(默认 7) | 历史页过期清理 |
 | 关于 | `setting_version` / `setting_author` | 版本号(动态)/作者 | 展示 |
@@ -174,7 +176,7 @@ XLog:文件 `Logs/GoGoGo.log`,单文件 2MB 轮转、最多 4 份备份、3 天�
 
 ## 13. 已知风险与运行时约束(排障索引)
 
-1. **高德 key 绑定**包名 `com.yybb.location` + 签名 SHA1——key 无效 = 地图空白/定位搜索报错,构建不拦。换签名证书必须同步 CI secret,否则本地与 CI 是两个签名身份。
+1. **高德 key 绑定**包名 `com.yybb.location` + 签名 SHA1——key 无效 = 地图空白/定位搜索报错,构建不拦。key **缺失**(自定义与内置皆空)时主界面入口弹引导去设置页配置(见 §4);key **无效**(填了但与包名/签名不匹配)仍无运行时检测,表现同为地图空白。换签名证书必须同步 CI secret,否则本地与 CI 是两个签名身份。
 2. **信息窗按钮触摸**:高德自定义 InfoWindow 以位图渲染、不向子 View 派发触摸事件——长按信息窗的保存/复制/分享/传送/收藏五按钮能否点击需真机验证(发布阻断冒烟项);失效则需改整窗 OnInfoWindowClickListener+对话框方案。
 3. **模拟是否生效**依赖开发者选项授权 + GPS 开启 + WiFi 关闭(WiFi 会让定位闪回真实位置,GO 后有警告弹窗,但只是提示不强制)。
 4. MainViewModel 四个 LiveData 无生产观察者(接线属行为变更,需专门评审);`mockRunning` 在 onDestroy 路径有陈旧值 TODO。

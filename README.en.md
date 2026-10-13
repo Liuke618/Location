@@ -26,6 +26,7 @@ A mock location APP without ROOT for Android 12+.
 4. **Optional real location**: off by default (no real location requests at all); enable it for the blue dot and "back to my location"
 5. **In-app updates**: detects new releases and installs them
 6. **Agreement & privacy gate**: user agreement and privacy policy shown on first launch
+7. **Self-serve AMap key setup**: packages without a configured key get an onboarding dialog at launch; the Settings page accepts a self-registered key with step-by-step guidance and the signing SHA1 for reference, effective after restart
 
 ## Requirements
 
@@ -45,7 +46,7 @@ Toolchain: JDK 17 + Android SDK (AGP 9.x / targetSdk 36, single pure-Java `:app`
 
 1. Configure `local.properties` (not committed):
    - `sdk.dir`: Android SDK path
-   - `AMAP_API_KEY`: AMap Native key (bound to package `com.yybb.location` and the signing cert SHA1)
+   - `AMAP_API_KEY`: AMap Native key (bound to package `com.yybb.location` and the signing cert SHA1; optional — if omitted, the app guides you through configuring it under "Settings → AMap API Key" at launch)
    - `KEY_ALIAS` / `KEY_STORE_PASSWORD` / `KEY_PASSWORD`: signing credentials
 2. Build & verify:
 

@@ -34,4 +34,15 @@ public class AmapUtilsTest {
     public void resolveEffectiveApiKey_trimsBuiltInKey() {
         assertEquals("built-in-key", AmapUtils.resolveEffectiveApiKey("", " built-in-key "));
     }
+
+    @Test
+    public void toColonHex_bytesToUppercaseColonSeparatedHex() {
+        assertEquals("D3:67:71", AmapUtils.toColonHex(new byte[]{(byte) 0xd3, 0x67, 0x71}));
+        assertEquals("0A:FF:00", AmapUtils.toColonHex(new byte[]{0x0a, (byte) 0xff, 0x00}));
+    }
+
+    @Test
+    public void toColonHex_emptyInput_returnsEmptyString() {
+        assertEquals("", AmapUtils.toColonHex(new byte[0]));
+    }
 }

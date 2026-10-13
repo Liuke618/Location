@@ -67,6 +67,8 @@ import com.yybb.location.ui.update.UpdateManager;
 import com.yybb.location.ui.favorite.FavoriteActivity;
 import com.yybb.location.ui.history.HistoryActivity;
 import com.yybb.location.ui.settings.SettingsActivity;
+import com.yybb.location.ui.settings.AmapKeyGuide;
+import com.yybb.location.utils.AmapUtils;
 import com.yybb.location.utils.ShareUtils;
 import com.yybb.location.utils.GoUtils;
 import com.yybb.location.utils.MapUtils;
@@ -124,6 +126,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     /*============================== 更新 相关 ==============================*/
     //更新检测/下载/安装管线收编于 UpdateManager（对话框组装随流程迁入，见该类）
     private UpdateManager mUpdateManager;
+    //高德 key 缺失标记:onCreate 判定一次,设置页返回(onResume)若已补上则提示重启生效
+    private boolean mKeyMissingOnCreate;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -204,6 +208,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         mUpdateManager.init(this);
 
         mUpdateManager.checkUpdate(false);
+
+        //高德 Key 缺失引导:生效 key(设置自定义→清单内置)为空时地图空白/搜索报错,构建不拦,只能入口处提示
+        maybePromptAmapKey();
     }
 
     @Override
@@ -219,6 +226,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         XLog.i("MainActivity: onResume");
         mMapController.onResume();
         applyLocateSelfSetting();
+        maybeToastKeyConfigured();
         mSensorManager.registerListener(this, mSensorAccelerometer, SensorManager.SENSOR_DELAY_UI);
         mSensorManager.registerListener(this, mSensorMagnetic, SensorManager.SENSOR_DELAY_UI);
         super.onResume();
@@ -230,6 +238,35 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         boolean locateSelf = sharedPreferences.getBoolean("setting_locate_self", false);
         mMapController.setMyLocationEnabled(locateSelf);
         findViewById(R.id.cur_position).setVisibility(locateSelf ? View.VISIBLE : View.GONE);
+    }
+
+    //高德 key 缺失引导(onCreate 判定一次):生效 key 为空时弹窗,可跳设置页锚定 key 项、或先看申请指引;
+    //点"稍后"不打断使用,未配置则下次进主界面仍会提示
+    private void maybePromptAmapKey() {
+        mKeyMissingOnCreate = AmapUtils.getEffectiveApiKey(this).isEmpty();
+        if (!mKeyMissingOnCreate) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.amap_key_missing_title)
+                .setMessage(R.string.amap_key_missing_message)
+                .setPositiveButton(R.string.amap_key_missing_go_settings, (dialog, which) -> {
+                    Intent intent = new Intent(this, SettingsActivity.class);
+                    intent.putExtra(SettingsActivity.EXTRA_ANCHOR_KEY, AmapUtils.PREF_KEY_AMAP_API_KEY);
+                    startActivity(intent);
+                })
+                .setNegativeButton(R.string.amap_key_missing_how_to_get,
+                        (dialog, which) -> AmapKeyGuide.show(this))
+                .setNeutralButton(R.string.amap_key_missing_later, null)
+                .show();
+    }
+
+    //key 下发在 Application 启动期,设置页补配后需重启进程才生效;onResume 检测到补配即提示一次
+    private void maybeToastKeyConfigured() {
+        if (mKeyMissingOnCreate && !AmapUtils.getEffectiveApiKey(this).isEmpty()) {
+            mKeyMissingOnCreate = false;
+            GoUtils.DisplayToast(this, getResources().getString(R.string.amap_key_configured_restart));
+        }
     }
 
     @Override

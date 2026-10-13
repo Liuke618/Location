@@ -26,6 +26,7 @@
 4. **真实定位可选**:默认关闭,不发起任何真实定位请求;开启后显示真实位置蓝点并支持"回到当前位置"
 5. **应用内更新**:自动检测新版本并下载安装
 6. **协议与隐私同意**:首次启动明示用户协议与隐私政策,同意后才可使用
+7. **高德 Key 自助配置**:未配置 Key 的包启动时弹窗引导;设置页可填入自申请 Key,附申请步骤与签名 SHA1 对照,重启生效
 
 ## 系统要求
 
@@ -45,7 +46,7 @@
 
 1. 在 `local.properties`(不入库)中配置:
    - `sdk.dir`:Android SDK 路径
-   - `AMAP_API_KEY`:高德 Web 端申请的 Native key(绑定包名 `com.yybb.location` 与签名证书 SHA1,key 无效时地图空白、搜索报错)
+   - `AMAP_API_KEY`:高德 Web 端申请的 Native key(绑定包名 `com.yybb.location` 与签名证书 SHA1,key 无效时地图空白、搜索报错;跳过该键亦可——启动时应用会引导在"设置 → 高德 API Key"内配置)
    - `KEY_ALIAS` / `KEY_STORE_PASSWORD` / `KEY_PASSWORD`:签名凭据(缺失则 release 构建在签名阶段失败)
 2. 构建与验证:
 

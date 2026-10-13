@@ -4,7 +4,7 @@
 
 GoGoGo(任意门)——Android 免 Root 虚拟定位 App(GPL-3.0,仅 arm64-v8a),基于 TestProvider 调试 API + 高德 LBS SDK(Maven 组合包 3dmap-location-search)。
 
-**功能**:地图选点模拟定位(静态选点后一键瞬移,无移动模拟;真实定位受设置项"定位自己的位置"控制,默认关=不激活定位图层不读真实位置,仅搜索/选点);POI 搜索 + 逆地理;定位/搜索历史(SQLite);收藏定位地址(独立表,不参与历史有效期清理,可设默认收藏用于冷启动/未选点 GO 兜底);应用内更新检查/下载/安装(GitHub releases);欢迎页协议与隐私同意流程。
+**功能**:地图选点模拟定位(静态选点后一键瞬移,无移动模拟;真实定位受设置项"定位自己的位置"控制,默认关=不激活定位图层不读真实位置,仅搜索/选点);POI 搜索 + 逆地理;定位/搜索历史(SQLite);收藏定位地址(独立表,不参与历史有效期清理,可设默认收藏用于冷启动/未选点 GO 兜底);应用内更新检查/下载/安装(GitHub releases);应用内高德 Key 配置(设置页,重启生效;自定义与内置皆空时主界面启动弹引导,指引含申请步骤、包名与签名 SHA1);欢迎页协议与隐私同意流程。
 
 ## 构建与验证
 
@@ -41,7 +41,7 @@ com.yybb.location          # 应用包名(applicationId/namespace)
 
 ## 已知坑
 
-- 高德 key 绑定包名 com.yybb.location + 签名 SHA1(key 无效 = 地图空白/定位搜索报错,构建不拦)
+- 高德 key 绑定包名 com.yybb.location + 签名 SHA1(key 无效 = 地图空白/定位搜索报错,构建不拦);key 缺失(设置自定义与清单内置皆空)时主界面 onCreate 弹引导跳设置页锚定 key 项(生效值判定统一走 `AmapUtils.getEffectiveApiKey`,2026-10-13 起)
 - 高德隐私合规三套接口(地图 MapsInitializer / 定位 AMapLocationClient / 搜索 ServiceSettings)**各自独立、三套都要调**，漏调对应能力运行时报错(搜索=1907)且构建不拦；`updatePrivacyShow` 无条件调用，`updatePrivacyAgree` **只能在用户同意自有协议/隐私政策之后下发**(经 `GoApplication.applyAmapPrivacyAgreement`，同意位持久化在 SharedPreferences 键 `KEY_ACCEPT_AGREEMENT`/`KEY_ACCEPT_PRIVACY`)——把它改回无条件调用等于替用户点头，隐私声明与实际行为不符
 - 高德自定义 InfoWindow 窗体以位图渲染、**不向子 View 派发触摸事件**——长按地址气泡的保存/复制/分享/传送四按钮能否点击需真机验证(发布阻断冒烟项);失效则需改整窗 OnInfoWindowClickListener+对话框方案
 - 高德 POI 建议的 `Tip.getPoint()` 可空——入列表前须过滤无坐标项(PoiSearchHelper 已过滤)

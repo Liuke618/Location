@@ -54,6 +54,11 @@
             app:title="@string/setting_amap_api_key"
             app:dialogMessage="@string/setting_amap_api_key_dialog"
             app:iconSpaceReserved="false"/>
+        <Preference
+            app:key="setting_amap_api_key_guide"
+            app:title="@string/setting_amap_api_key_guide"
+            app:summary="@string/setting_amap_api_key_guide_summary"
+            app:iconSpaceReserved="false"/>
     </PreferenceCategory>
 
     <PreferenceCategory

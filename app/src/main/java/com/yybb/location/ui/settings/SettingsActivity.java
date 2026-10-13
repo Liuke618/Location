@@ -13,6 +13,9 @@ import com.yybb.location.R;
  */
 public class SettingsActivity extends BaseActivity {
 
+    /** 可选:锚定并滚动到指定偏好项的 key(主界面 key 缺失引导跳转时定位到"高德 API Key") */
+    public static final String EXTRA_ANCHOR_KEY = "anchor_key";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -20,11 +23,18 @@ public class SettingsActivity extends BaseActivity {
         /* 状态栏颜色由主题统一处理:透明状态栏 + 根布局 fitsSystemWindows,状态栏区域露出窗口背景(surface) */
 
         setContentView(R.layout.activity_settings);
-        
+
         if (savedInstanceState == null) {
+            FragmentSettings fragment = new FragmentSettings();
+            String anchorKey = getIntent().getStringExtra(EXTRA_ANCHOR_KEY);
+            if (anchorKey != null) {
+                Bundle args = new Bundle();
+                args.putString(FragmentSettings.ARG_SCROLL_TO_KEY, anchorKey);
+                fragment.setArguments(args);
+            }
             getSupportFragmentManager()
             .beginTransaction()
-            .replace(R.id.settings, new FragmentSettings())
+            .replace(R.id.settings, fragment)
             .commit();
         }
 

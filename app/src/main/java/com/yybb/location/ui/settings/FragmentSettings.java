@@ -18,6 +18,9 @@ import com.yybb.location.R;
  */
 public class FragmentSettings extends PreferenceFragmentCompat {
 
+    /** 参数键:锚定并滚动到指定偏好项(SettingsActivity.EXTRA_ANCHOR_KEY 经 args 透传) */
+    public static final String ARG_SCROLL_TO_KEY = "arg_scroll_to_key";
+
     // Set a non-empty decimal EditTextPreference
     private void setupDecimalEditTextPreference(EditTextPreference preference) {
         if (preference != null) {
@@ -60,6 +63,24 @@ public class FragmentSettings extends PreferenceFragmentCompat {
                         ? R.string.setting_amap_api_key_set
                         : R.string.setting_amap_api_key_unset);
             });
+        }
+
+        // 高德 Key 申请指引:非持久入口,弹步骤(含包名与签名 SHA1 对照值)
+        Preference pfAmapKeyGuide = findPreference("setting_amap_api_key_guide");
+        if (pfAmapKeyGuide != null) {
+            pfAmapKeyGuide.setOnPreferenceClickListener(preference -> {
+                AmapKeyGuide.show(requireActivity());
+                return true;
+            });
+        }
+
+        // 主界面 key 缺失引导跳转时锚定到指定项
+        Bundle arguments = getArguments();
+        if (arguments != null) {
+            String scrollToKey = arguments.getString(ARG_SCROLL_TO_KEY);
+            if (scrollToKey != null) {
+                scrollToPreference(scrollToKey);
+            }
         }
 
         SwitchPreferenceCompat pLog = findPreference("setting_log_off");
