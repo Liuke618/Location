@@ -39,7 +39,7 @@ import java.util.ArrayList;
 
 /**
  * 欢迎页：承载用户协议与隐私政策的同意流程，同意结果持久化于 SharedPreferences（KEY_ACCEPT_AGREEMENT/KEY_ACCEPT_PRIVACY），
- * 并作为高德 updatePrivacyAgree 的下发前提；同意后进入主界面。
+ * 并作为高德 updatePrivacyAgree 的下发前提；同意后进入主界面，再次启动时已同意且定位权限仍在授则跳过欢迎页直接进入。
  */
 public class WelcomeActivity extends AppCompatActivity {
     private static SharedPreferences preferences;
@@ -62,6 +62,17 @@ public class WelcomeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // 生成默认参数的值（一定要尽可能早的调用，因为后续有些界面可能需要使用参数）
+        PreferenceManager.setDefaultValues(this, R.xml.preferences_main, false);
+
+        // 已同意协议与隐私政策且定位权限仍在授时跳过欢迎页直接进主界面；
+        // 权限被系统回收则回落欢迎页，由既有流程自动补弹权限申请
+        if (canSkipWelcome()) {
+            startActivity(new Intent(this, MainActivity.class));
+            finish();
+            return;
+        }
+
         setContentView(R.layout.activity_welcome);
 
         // edge-to-edge 强制后,底部协议勾选框避开导航栏
@@ -76,13 +87,19 @@ public class WelcomeActivity extends AppCompatActivity {
             return windowInsets;
         });
 
-        // 生成默认参数的值（一定要尽可能早的调用，因为后续有些界面可能需要使用参数）
-        PreferenceManager.setDefaultValues(this, R.xml.preferences_main, false);
-
         Button startBtn = findViewById(R.id.startButton);
         startBtn.setOnClickListener(v -> startMainActivity());
 
         checkAgreementAndPrivacy();
+    }
+
+    // 跳过欢迎页的条件:协议与隐私同意位均真,且精确定位/粗略定位权限仍在授
+    private boolean canSkipWelcome() {
+        SharedPreferences prefs = getSharedPreferences(KEY_ACCEPT_AGREEMENT, MODE_PRIVATE);
+        return prefs.getBoolean(KEY_ACCEPT_AGREEMENT, false)
+                && prefs.getBoolean(KEY_ACCEPT_PRIVACY, false)
+                && checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
     @Override

@@ -7,7 +7,7 @@
 GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德地图上选一个点(点选/搜索/手动输入坐标),应用通过系统 `LocationManager` 的 TestProvider 调试 API,以 100ms 周期持续向 GPS 与 NETWORK 两个位置供给源写入该点的 WGS84 坐标,使其他 App 读到伪造的"当前位置"。只做静态瞬移(一键 GO / 运行中传送),不模拟移动轨迹。
 
 - 技术形态:纯 Java 单模块 `:app`,minSdk 31 / targetSdk 36,LBS 能力全部来自高德 3dmap-location-search 组合 SDK。
-- 入口链:WelcomeActivity(LAUNCHER,协议门控)→ MainActivity(地图选点主界面)→ ServiceGo(模拟定位前台服务)。
+- 入口链:WelcomeActivity(LAUNCHER,协议门控;已同意且定位权限仍在授时 onCreate 直接转进 MainActivity)→ MainActivity(地图选点主界面)→ ServiceGo(模拟定位前台服务)。
 - 包结构:`com.yybb.location` 根包(组合根 AppContainer)+ `ui.map / ui.search / ui.location / ui.history / ui.favorite / ui.update / ui.settings / ui.WelcomeActivity` + `data`(仓库接口与 SQLite)+ `service`(模拟服务)+ `utils`。
 
 ## 2. 业务总览
@@ -31,6 +31,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 
 - **GoApplication.onCreate**:`updatePrivacyShow` 对地图(`MapsInitializer`)、定位(`AMapLocationClient`)、搜索(`ServiceSettings`)三套接口**无条件下发**;`updatePrivacyAgree` 只按持久化同意位决定(经 `applyAmapPrivacyAgreement`,两键 `KEY_ACCEPT_AGREEMENT`/`KEY_ACCEPT_PRIVACY` 同真才下发)。三套接口互相独立,漏调对应能力运行时报错(搜索=1907)。
 之后经 `applyAmapApiKey` 向三套 SDK setter 注入生效 API key:设置页 `setting_amap_api_key` 优先,否则回落构建期注入的清单值,再经 `resolveEffectiveApiKey`(AmapUtils,纯函数有单测)解析;两者皆空则不下发(SDK 按无 key 处理)。SDK 侧优先级=运行时 setter 非空值 > manifest meta-data > 内置 k.store(反编译组合包 AppInfo 核实),故未自定义时行为与"SDK 自读清单"完全一致。
+- **再次启动早退**:onCreate 在 inflate 前读同意位与定位权限,两同意位均真**且** FINE/COARSE 仍在授 → 直接 startActivity(MainActivity) 并 finish,不再展示欢迎页;权限被系统回收则回落欢迎页,由既有流程自动补弹权限申请。`setDefaultValues` 在早退判断前执行,两条路径都生效;网络/GPS 校验仅在欢迎页"进入应用"路径生效,早退路径不阻断(离线进主界面=地图空白,与进入后断网一致)。
 - **WelcomeActivity 流程**:
   1. 读同意位,已双双同意则直接勾选并跳过弹窗;
   2. 勾选复选框时若未同意完,自动**依序**弹出协议弹窗→隐私弹窗(均不可点外部取消);取消勾选把两个同意位重置为 false;
