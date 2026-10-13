@@ -90,10 +90,10 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 
 **链路**:UI 只依赖 `MockLocationController` 接口(禁止直接碰 ServiceGoBinder)→ `ServiceGoController`(bind + startForegroundService,先自查定位权限,缺权拒启动)→ `ServiceGo`。
 
-- **ServiceGo.onCreate**:先 `startForeground`(三参,`foregroundServiceType="location"`,常驻通知点击回主界面)再检查定位权限(缺权则 stopSelf,满足 FGS 契约);随后移除并重建 GPS/NETWORK 两个 **TestProvider**(provider 已存在时复用而非崩溃),最后在专用 HandlerThread 上启动 **100ms 周期供给循环**。
+- **ServiceGo.onCreate**:先 `startForeground`(三参,`foregroundServiceType="location"`,常驻通知点击回主界面)再检查定位权限(缺权则 stopSelf,满足 FGS 契约);随后移除并重建 GPS/NETWORK 两个 **TestProvider**(停用与注销各自成 try,且**不再以"provider 当前是否启用"为前提**——进程被强杀后留下的是"已注册但未启用"的 provider,旧写法永远删不掉,卸载后系统仍挂着假 provider;provider 已存在时复用而非崩溃),最后在专用 HandlerThread 上启动 **100ms 周期供给循环**。
 - **供给内容**:每周期向两个 TestProvider 各写一条固定位置——GPS(精度 1m,附"7 颗卫星" extras)、NETWORK(精度 2m),时间为实时(当前毫秒/elapsedRealtime),坐标为 GO 时换算好的 **WGS84**。
-- **运行中传送**:`setPosition` 更新坐标并立即触发下一轮供给。
-- **可靠性约定**:`onStartCommand` 刻意 `START_NOT_STICKY`——进程被回收后**不自动恢复**模拟(避免无人知情地持续供给假定位);停止标志 `volatile`(主线程 onDestroy 写、供给线程读);默认坐标为济南(36.667662, 117.027707, 海拔 55)。
+- **运行中传送**:`setPosition` 更新坐标并立即触发下一轮供给。目标三轴经 `PositionPublisher` 装在**不可变快照**里整体发布(主线程写、供给线程读):三个独立 `double` 字段允许供给线程读到"新经度配旧纬度"的串样坐标,回归用例见 `PositionPublisherTest.concurrentPublish_neverExposesMixedAxes`。
+- **可靠性约定**:`onStartCommand` 刻意 `START_NOT_STICKY`——进程被回收后**不自动恢复**模拟(避免无人知情地持续供给假定位);停止标志 `volatile`(主线程 onDestroy 写、供给线程读);默认坐标为济南(36.667662, 117.027707, 海拔 55,常量在 `PositionPublisher.DEFAULT_*`)。
 - **系统前提**:用户须在开发者选项把本应用选为"模拟位置信息应用"(GoUtils 试探检测,manifest 声明 `ACCESS_MOCK_LOCATION`)。
 
 ## 8. 定位历史
@@ -114,7 +114,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 
 - **收藏入口**:① 主界面信息窗"★"按钮——逆地理取地址后落收藏表(成败 Toast);② 历史页长按"收藏"——按 id 取原始行整行复制;③ 收藏页菜单"添加"——对话框手动输入名称(可空,回退"手动地点")/经度/纬度,坐标系单选(默认高德 GCJ02,可切 GPS 原始 WGS84),经 `GoUtils.validateManualLatLng` 校验(错误提示分支与主界面手动输入对话框一致)、`convertManualLatLng` 换算成双坐标落库。同 WGS84 坐标先删后插(重复收藏同一点=改名)。
 - **列表交互**:行形与历史页一致(复用 history_item 布局);默认收藏名称前加"★"前缀(仅展示);点击行回填地图(随机偏移同样生效);长按:编辑/ 设为默认(或"取消默认")/ 删除;菜单:清空全部(确认框)。
-- **默认收藏**:身份是 **WGS84 坐标字符串对**(存偏好 `setting_default_favorite_lng_wgs/lat_wgs`,与收藏表去重键同构,改名不失效)。生效点有两处:主界面**冷启动恢复**直接选中默认点;**未选点时按 GO** 自动选中默认点再启动(默认点不套随机偏移——确定性目标)。对应行被删除(单删或清空)时同步清偏好,避免同坐标再收藏时默认"悄悄复活"。
+- **默认收藏**:身份是 **WGS84 坐标字符串对**(存偏好 `setting_default_favorite_lng_wgs/lat_wgs`,与收藏表去重键同构,改名不失效)。生效点有两处:主界面**冷启动恢复**直接选中默认点;**未选点时按 GO** 自动选中默认点再启动(默认点不套随机偏移——确定性目标)。对应行被删除(单删或清空)时同步清偏好,避免同坐标再收藏时默认"悄悄复活"。默认收藏行的 CUSTOM(GCJ02)坐标**解析不出**时(旧版本写入/外部改库),两处生效点都按"无默认收藏"处理(`GoUtils.parseStoredCoordinatePair` 回 null),而不是崩在 `Double.parseDouble` 上。
 
 ## 10. 应用内更新
 
