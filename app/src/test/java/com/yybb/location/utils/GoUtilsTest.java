@@ -1,6 +1,8 @@
 package com.yybb.location.utils;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
@@ -108,5 +110,37 @@ public class GoUtilsTest {
         double[] back = MapUtils.gcj02towgs84(quad[2], quad[3]);
         assertEquals(116.397428, back[0], 1e-5);
         assertEquals(39.90923, back[1], 1e-5);
+    }
+
+    /*============================== 库内存量坐标解析(默认收藏恢复) ==============================*/
+
+    @Test
+    public void parseStoredCoordinatePair_validNumbers_returnLngLatPair() {
+        double[] pair = GoUtils.parseStoredCoordinatePair("116.397428", "39.90923");
+
+        assertNotNull(pair);
+        assertEquals(116.397428, pair[0], 0.0);
+        assertEquals(39.90923, pair[1], 0.0);
+        // 首尾空白容许(与 parseDoubleOrDefault 同语义)
+        assertEquals(-39.9, GoUtils.parseStoredCoordinatePair(" -116.4 ", " -39.9")[1], 0.0);
+    }
+
+    @Test
+    public void parseStoredCoordinatePair_malformedOrNull_returnNull() {
+        // 坐标串来自收藏表:旧版本写入/外部改库都可能是空串或非数字。原调用点直接 Double.parseDouble,
+        // 冷启动恢复默认收藏与未选点按 GO 两条路径都会 NumberFormatException 崩溃,故非法必须回 null
+        assertNull(GoUtils.parseStoredCoordinatePair(null, "39.9"));
+        assertNull(GoUtils.parseStoredCoordinatePair("116.4", null));
+        assertNull(GoUtils.parseStoredCoordinatePair("", "39.9"));
+        assertNull(GoUtils.parseStoredCoordinatePair("116.4", "  "));
+        assertNull(GoUtils.parseStoredCoordinatePair("1.2.3", "39.9"));
+        assertNull(GoUtils.parseStoredCoordinatePair("abc", "39.9"));
+    }
+
+    @Test
+    public void parseStoredCoordinatePair_nonFinite_returnNull() {
+        // "NaN"/"Infinity" 可被 Double.parseDouble 接受,但选中点会落到地图上不存在的位置
+        assertNull(GoUtils.parseStoredCoordinatePair("NaN", "39.9"));
+        assertNull(GoUtils.parseStoredCoordinatePair("116.4", "Infinity"));
     }
 }

@@ -196,6 +196,22 @@ public class GoUtils {
         return Double.isFinite(parsed) ? parsed : fallback;
     }
 
+    /**
+     * 解析库内存量坐标串（收藏/历史行的经纬度列），返回 {经度, 纬度}；任一轴缺失/非数字/非有限即回 null。
+     * 这类串不是用户当下输入，而是可能由旧版本写入或被外部改过的表数据：原调用点（默认收藏恢复）直接
+     * Double.parseDouble，一条脏行就能让冷启动与"未选点按 GO"两条路径崩在 NumberFormatException。
+     * 刻意不做经纬度范围校验——越界值仍能在地图上标出来，属既有的可见行为，这里只拦"解析不出坐标"。
+     */
+    public static double[] parseStoredCoordinatePair(String lngText, String latText) {
+        double lng = parseDoubleOrDefault(lngText, Double.NaN);
+        double lat = parseDoubleOrDefault(latText, Double.NaN);
+        if (Double.isNaN(lng) || Double.isNaN(lat)) {
+            return null;
+        }
+
+        return new double[]{lng, lat};
+    }
+
     /*============================== 手动输入经纬度（收藏页添加） ==============================*/
 
     /** 校验结果码：经纬度合法 */

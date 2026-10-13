@@ -217,7 +217,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     protected void onPause() {
         XLog.i("MainActivity: onPause");
         mMapController.onPause();
-        mSensorManager.unregisterListener(this);
+        unregisterCompassSensors();
         super.onPause();
     }
 
@@ -227,8 +227,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         mMapController.onResume();
         applyLocateSelfSetting();
         maybeToastKeyConfigured();
-        mSensorManager.registerListener(this, mSensorAccelerometer, SensorManager.SENSOR_DELAY_UI);
-        mSensorManager.registerListener(this, mSensorMagnetic, SensorManager.SENSOR_DELAY_UI);
+        registerCompassSensors();
         super.onResume();
     }
 
@@ -273,7 +272,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     protected void onStop() {
         XLog.i("MainActivity: onStop");
         //取消注册传感器监听
-        mSensorManager.unregisterListener(this);
+        unregisterCompassSensors();
         super.onStop();
     }
 
@@ -287,7 +286,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         //下载完成接收器注销收编于 UpdateManager（与 init 注册成对）
         mUpdateManager.destroy();
 
-        mSensorManager.unregisterListener(this);
+        unregisterCompassSensors();
 
         // showLocation 静态门面不再委托本界面的控制器
         sMapController = null;
@@ -537,13 +536,33 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);// 获取传感器管理服务
         if (mSensorManager != null) {
             mSensorAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-            if (mSensorAccelerometer != null) {
-                mSensorManager.registerListener(this, mSensorAccelerometer, SensorManager.SENSOR_DELAY_UI);
-            }
             mSensorMagnetic = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-            if (mSensorMagnetic != null) {
-                mSensorManager.registerListener(this, mSensorMagnetic, SensorManager.SENSOR_DELAY_UI);
-            }
+        }
+        registerCompassSensors();
+    }
+
+    /**
+     * 罗盘（加速度+地磁）监听注册：SensorManager 不可用或设备缺少对应传感器时必须整体跳过——
+     * 原实现在 onResume 无条件 registerListener，缺传感器时传入 null sensor 即崩溃。
+     */
+    private void registerCompassSensors() {
+        if (mSensorManager == null) {
+            return;
+        }
+        if (mSensorAccelerometer != null) {
+            mSensorManager.registerListener(this, mSensorAccelerometer, SensorManager.SENSOR_DELAY_UI);
+        }
+        if (mSensorMagnetic != null) {
+            mSensorManager.registerListener(this, mSensorMagnetic, SensorManager.SENSOR_DELAY_UI);
+        }
+    }
+
+    /**
+     * 罗盘监听注销：unregisterListener 本身可重复调用，收口只为与注册共用同一处判空。
+     */
+    private void unregisterCompassSensors() {
+        if (mSensorManager != null) {
+            mSensorManager.unregisterListener(this);
         }
     }
 
@@ -906,7 +925,14 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         if (def == null) {
             return false;
         }
-        mMainViewModel.selectPoint(new LatLng(Double.parseDouble(def.latCustom), Double.parseDouble(def.lngCustom)));
+        // 坐标串来自收藏表,可能由旧版本写入或被外部改坏:解析不出即按"无默认收藏"处理,
+        // 而不是让冷启动恢复与未选点按 GO 两条路径崩在 NumberFormatException 上
+        double[] gcjLngLat = GoUtils.parseStoredCoordinatePair(def.lngCustom, def.latCustom);
+        if (gcjLngLat == null) {
+            XLog.e("MainActivity: 默认收藏坐标不可解析, 按无默认收藏处理");
+            return false;
+        }
+        mMainViewModel.selectPoint(new LatLng(gcjLngLat[1], gcjLngLat[0]));
         mMapState.setMarkName(def.location);
         mMapController.markMap();
         return true;
