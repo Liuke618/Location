@@ -53,8 +53,8 @@ android {
         // OldTargetApi：targetSdk 37 需先完成新版行为变更适配，属行为变更，本分支锁定 36（分支既定决策）
         //noinspection OldTargetApi
         targetSdk 36
-        versionCode 1
-        versionName '1.0' // https://semver.org/lang/zh-CN/
+        versionCode 2
+        versionName '1.1.0' // https://semver.org/lang/zh-CN/
         manifestPlaceholders = [AMAP_API_KEY: amapApiKey]
         buildConfigField "String", "UPDATE_REPO_SLUG", "\"${updateRepoSlug}\""
         ndk {
@@ -111,7 +111,7 @@ android {
         includeInBundle = false
     }
 
-    // lint 基线仅登记 2 条历史 IconLocation 告警（icon_gcoding.webp/welcome.webp 位于无密度目录）：
+    // lint 基线仅登记 2 条历史 IconLocation 告警（icon_gcoding.webp/welcome.png 位于无密度目录）：
     // 二者均为第三方位图文件，无法写入 @SuppressLint 或 tools:ignore；其“改目录”建议会改变位图
     // 解码密度、造成渲染行为变化，故按“逐条登记”方式保留；原 BaiduLBS_Android.jar 的
     // TrustAllX509TrustManager 豁免已随百度 jar 迁移删除，不再登记。
