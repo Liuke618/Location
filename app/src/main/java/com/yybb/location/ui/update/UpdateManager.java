@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -162,7 +163,10 @@ public class UpdateManager {
     /* HTTP 客户端收编决策：与 GeocoderHelper（Task 5）同构——助手各自持有 OkHttpClient，
        原 MainActivity.mOkHttpClient 的两处使用（REST 逆地理 / 更新检测）分别收编，
        MainActivity 字段随之删除；不共享实例以保持各助手自洽 */
-    private final OkHttpClient mOkHttpClient = new OkHttpClient();
+    private final OkHttpClient mOkHttpClient = new OkHttpClient.Builder()
+            // GitHub API 偶发长尾挂起:显式整体超时,超时走既有失败分支(自动检测静默/手动检测提示),不无限等待
+            .callTimeout(15, TimeUnit.SECONDS)
+            .build();
     private Activity mActivity;
     private DownloadManager mDownloadManager = null;
     private long mDownloadId;
