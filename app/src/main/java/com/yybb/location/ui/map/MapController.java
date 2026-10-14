@@ -12,6 +12,7 @@ import com.amap.api.maps.AMap;
 import com.amap.api.maps.CameraUpdateFactory;
 import com.amap.api.maps.LocationSource;
 import com.amap.api.maps.MapView;
+import com.amap.api.maps.UiSettings;
 import com.amap.api.maps.model.BitmapDescriptor;
 import com.amap.api.maps.model.BitmapDescriptorFactory;
 import com.amap.api.maps.model.LatLng;
@@ -81,6 +82,9 @@ public class MapController {
     // 地图初始化(定位数据源在此接线;图层是否启用由持有者按"定位自己的位置"开关决定,见 setMyLocationEnabled)
     public void init(LocationSource locationSource) {
         mAMap.setMapType(AMap.MAP_TYPE_NORMAL);
+        //缩放按钮用 main_map.xml 右侧悬浮组的自定义实现,高德内置缩放控件默认开启,不关会与之重复
+        UiSettings uiSettings = mAMap.getUiSettings();
+        uiSettings.setZoomControlsEnabled(false);
         mAMap.setMyLocationStyle(new MyLocationStyle().myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER));
         mAMap.setLocationSource(locationSource);
         mAMap.setOnMapClickListener(point -> mListener.onMapClick(point.longitude, point.latitude));
