@@ -13,6 +13,9 @@ import com.amap.api.services.geocoder.RegeocodeResult;
 
 import com.elvishew.xlog.XLog;
 
+import java.util.ArrayDeque;
+import java.util.Iterator;
+
 /**
  * 地理编码助手:逆地理编码单通道(高德 SDK GeocodeSearch,客户端内部网络,单 Android key)。
  * 构造与监听注册、请求下发收编于此;SDK 回调在主线程,单行落库由调用方在回调内完成(轻量可接受);
@@ -38,8 +41,20 @@ public class GeocoderHelper {
     }
 
     private GeocodeSearch mGeocodeSearch;
-    //单飞行回调(resolveAddress 下发与回调一一对应)
-    private AddressCallback mPendingCallback;
+    //落库逆地理的待回回调队列(请求点→回调)。保存/收藏可快速连点产生并发请求,SDK 回包也可能与长按通道混行甚至乱序:
+    //按请求点配对消费,替代旧单飞行槽(新请求直接覆盖旧回调=旧保存静默丢失)。仅主线程读写(下发与 SDK 回调均在主线程)
+    private final ArrayDeque<PendingReverse> mPendingCallbacks = new ArrayDeque<>();
+
+    /** 一条待回的落库逆地理请求(请求点用于回包配对) */
+    private static final class PendingReverse {
+        final LatLonPoint point;
+        final AddressCallback callback;
+
+        PendingReverse(LatLonPoint point, AddressCallback callback) {
+            this.point = point;
+            this.callback = callback;
+        }
+    }
 
     /**
      * 构造 GeocodeSearch 并注册结果监听(原 initMap 中 newInstance + setOnGetGeoCodeResultListener 部分)
@@ -50,14 +65,14 @@ public class GeocoderHelper {
             mGeocodeSearch.setOnGeocodeSearchListener(new GeocodeSearch.OnGeocodeSearchListener() {
                 @Override
                 public void onRegeocodeSearched(RegeocodeResult regeocodeResult, int rCode) {
-                    //落库通道:resolveAddress 的单飞行回调(rCode==1000 且解析成功时 formatAddress 非空,否则 null)
+                    //落库通道:resolveAddress 的待回回调(rCode==1000 且解析成功时 formatAddress 非空,否则 null)
                     String formatAddress = null;
                     if (rCode == 1000 && regeocodeResult != null && regeocodeResult.getRegeocodeAddress() != null) {
                         formatAddress = regeocodeResult.getRegeocodeAddress().getFormatAddress();
                     }
-                    if (mPendingCallback != null) {
-                        mPendingCallback.onAddressResolved(rCode, formatAddress);
-                        mPendingCallback = null;
+                    AddressCallback pending = takePendingCallback(regeocodeResult);
+                    if (pending != null) {
+                        pending.onAddressResolved(rCode, formatAddress);
                     }
                     //长按信息窗通道:与落库通道互不排斥,并存派发
                     listener.onGetReverseGeoCodeResult(regeocodeResult);
@@ -86,16 +101,39 @@ public class GeocoderHelper {
 
     /**
      * 发起落库逆地理请求(原 REST 版 resolveAddress 对应物,ak/safeCode 概念随 SDK 化删除;
-     * 回调在 SDK 主线程,单行落库在回调内完成)
+     * 回调在 SDK 主线程,单行落库在回调内完成)。并发请求按请求点配对回包,互不覆盖。
      */
     public void resolveAddress(double lng, double lat, @NonNull AddressCallback cb) {
         if (mGeocodeSearch == null) {
             cb.onAddressResolved(-1, null);
             return;
         }
-        mPendingCallback = cb;
+        // 队列上限保护:回包异常丢失(网络层吞掉)时最老的请求按失败回调兜底,不无限积压也不静默悬挂
+        if (mPendingCallbacks.size() >= 8) {
+            mPendingCallbacks.removeFirst().callback.onAddressResolved(-1, null);
+        }
+        LatLonPoint point = new LatLonPoint(lat, lng);
+        mPendingCallbacks.addLast(new PendingReverse(point, cb));
         //参数为 GCJ02;LatLonPoint 语序为(纬度,经度)
-        mGeocodeSearch.getFromLocationAsyn(new RegeocodeQuery(new LatLonPoint(lat, lng), 200, GeocodeSearch.AMAP));
+        mGeocodeSearch.getFromLocationAsyn(new RegeocodeQuery(point, 200, GeocodeSearch.AMAP));
+    }
+
+    /** 按请求点取走配对的待回回调;无点信息或无配对(长按通道/孤儿回包)不动队列 */
+    private AddressCallback takePendingCallback(RegeocodeResult result) {
+        LatLonPoint point = result != null && result.getRegeocodeQuery() != null
+                ? result.getRegeocodeQuery().getPoint() : null;
+        if (point == null) {
+            return null;
+        }
+        for (Iterator<PendingReverse> iterator = mPendingCallbacks.iterator(); iterator.hasNext(); ) {
+            PendingReverse pending = iterator.next();
+            if (pending.point.getLatitude() == point.getLatitude()
+                    && pending.point.getLongitude() == point.getLongitude()) {
+                iterator.remove();
+                return pending.callback;
+            }
+        }
+        return null;
     }
 
     /** 纯函数:逆地理原始结果→落库地址(不触碰 android.*,不依赖实例状态)。三分支:
