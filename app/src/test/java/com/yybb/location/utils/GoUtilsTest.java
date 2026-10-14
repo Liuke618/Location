@@ -153,11 +153,17 @@ public class GoUtilsTest {
 
     @Test
     public void parseMockWriteIntervalMs_invalidOrNonPositive_fallBackToDefault() {
-        // 周期直接驱动供给循环的 sleep:脏值轻则设置无效,0/负数会让循环空转,一律回默认 1s
+        // 周期直接驱动供给循环的 sleep:脏值轻则设置无效,0/负数会让循环空转,一律回默认 100ms
         assertEquals(GoUtils.DEFAULT_MOCK_WRITE_INTERVAL_MS, GoUtils.parseMockWriteIntervalMs(null));
         assertEquals(GoUtils.DEFAULT_MOCK_WRITE_INTERVAL_MS, GoUtils.parseMockWriteIntervalMs(""));
         assertEquals(GoUtils.DEFAULT_MOCK_WRITE_INTERVAL_MS, GoUtils.parseMockWriteIntervalMs("abc"));
         assertEquals(GoUtils.DEFAULT_MOCK_WRITE_INTERVAL_MS, GoUtils.parseMockWriteIntervalMs("0"));
         assertEquals(GoUtils.DEFAULT_MOCK_WRITE_INTERVAL_MS, GoUtils.parseMockWriteIntervalMs("-500"));
+    }
+
+    @Test
+    public void mockWriteInterval_defaultPinnedTo100ms() {
+        // 默认档是产品决策(2026-10-14):上游硬编码即 100ms,设置默认与之对齐;字面量锚定防误改
+        assertEquals(100L, GoUtils.DEFAULT_MOCK_WRITE_INTERVAL_MS);
     }
 }

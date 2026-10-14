@@ -90,7 +90,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 
 **链路**:UI 只依赖 `MockLocationController` 接口(禁止直接碰 ServiceGoBinder)→ `ServiceGoController`(bind + startForegroundService,先自查定位权限,缺权拒启动)→ `ServiceGo`。
 
-- **ServiceGo.onCreate**:先 `startForeground`(三参,`foregroundServiceType="location"`,常驻通知点击回主界面、带"停止模拟"动作按钮)再检查定位权限(缺权则 stopSelf,满足 FGS 契约);随后移除并重建 GPS/NETWORK 两个 **TestProvider**(停用与注销各自成 try,且**不再以"provider 当前是否启用"为前提**——进程被强杀后留下的是"已注册但未启用"的 provider,旧写法永远删不掉,卸载后系统仍挂着假 provider;provider 已存在时复用而非崩溃),最后在专用 HandlerThread 上启动 **周期供给循环**(周期读自设置项 `setting_mock_write_interval`,默认 1000ms,档位 100/500/1000/2000/5000ms,解析兜底走 `GoUtils.parseMockWriteIntervalMs`;每 tick 读取一次,设置页修改即时生效)。
+- **ServiceGo.onCreate**:先 `startForeground`(三参,`foregroundServiceType="location"`,常驻通知点击回主界面、带"停止模拟"动作按钮)再检查定位权限(缺权则 stopSelf,满足 FGS 契约);随后移除并重建 GPS/NETWORK 两个 **TestProvider**(停用与注销各自成 try,且**不再以"provider 当前是否启用"为前提**——进程被强杀后留下的是"已注册但未启用"的 provider,旧写法永远删不掉,卸载后系统仍挂着假 provider;provider 已存在时复用而非崩溃),最后在专用 HandlerThread 上启动 **周期供给循环**(周期读自设置项 `setting_mock_write_interval`,默认 100ms,档位 100/500/1000/2000/5000ms,解析兜底走 `GoUtils.parseMockWriteIntervalMs`;每 tick 读取一次,设置页修改即时生效)。
 - **供给内容**:每周期向两个 TestProvider 各写一条固定位置——GPS(精度 1m,附"7 颗卫星" extras)、NETWORK(精度 2m),时间为实时(当前毫秒/elapsedRealtime),坐标为 GO 时换算好的 **WGS84**。
 - **运行中传送**:`setPosition` 更新坐标并立即触发下一轮供给。目标三轴经 `PositionPublisher` 装在**不可变快照**里整体发布(主线程写、供给线程读):三个独立 `double` 字段允许供给线程读到"新经度配旧纬度"的串样坐标,回归用例见 `PositionPublisherTest.concurrentPublish_neverExposesMixedAxes`。
 - **通知栏"停止模拟"**:通知 action 经本地广播(`ServiceGoController.ACTION_STOP_MOCK`,`setPackage` + `RECEIVER_NOT_EXPORTED`)发给 MainActivity 的动态接收器(onCreate 注册、onDestroy 注销),由界面侧调 `MockLocationController.stop()` 停服并复位 GO 按钮运行态镜像——服务被 Activity 以 BIND_AUTO_CREATE 持有,**stopSelf 在绑定解除前销不掉服务、TestProvider 无从注销**,故停服动作必须回到持绑方,不能服务内自停。
@@ -135,7 +135,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 | 分组 | 键 | 含义 | 消费方 |
 |------|----|------|--------|
 | 移动 | `setting_altitude` | 模拟海拔(默认 55.0) | GO 时写入 WGS84 高度 |
-| 移动 | `setting_mock_write_interval` | 模拟位置写入频率(默认 1 秒,档位 100ms/500ms/1s/2s/5s,修改即时生效) | ServiceGo 供给循环周期 |
+| 移动 | `setting_mock_write_interval` | 模拟位置写入频率(默认 100 毫秒,档位 100ms/500ms/1s/2s/5s,修改即时生效) | ServiceGo 供给循环周期 |
 | 位置偏移 | `setting_random_offset` | 随机偏移开关(默认关) | 历史/收藏页点击行 |
 | 位置偏移 | `setting_lat_max_offset` / `setting_lon_max_offset` | 纬/经度偏移上限米(默认 10) | 同上 |
 | 地图定位 | `setting_locate_self` | 定位自己的位置开关(默认关) | MainActivity.onResume(定位图层启停 + 回到当前位置按钮显隐,见 §4) |

@@ -70,7 +70,7 @@
         <item>2000</item>
         <item>5000</item>
     </string-array>
-    <string name="setting_mock_write_interval_summary">模拟位置按此周期持续写入;默认 1 秒,修改即时生效。周期越短定位刷新越快、越耗电(当前:%s)</string>
+    <string name="setting_mock_write_interval_summary">模拟位置按此周期持续写入;默认 100 毫秒,修改即时生效。周期越短定位刷新越快、越耗电(当前:%s)</string>
 
     <!-- 位置偏移相关参数 -->
     <string name="setting_group_location_offset">位置偏移</string>

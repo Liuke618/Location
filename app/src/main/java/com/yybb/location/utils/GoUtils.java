@@ -197,7 +197,7 @@ public class GoUtils {
     }
 
     /** 模拟位置写入周期默认值(毫秒)。原服务硬编码 100ms,现周期由设置项驱动,此值是解析兜底档 */
-    public static final long DEFAULT_MOCK_WRITE_INTERVAL_MS = 1000L;
+    public static final long DEFAULT_MOCK_WRITE_INTERVAL_MS = 100L;
 
     /**
      * 解析模拟位置写入周期设置(毫秒),非法或非正数回退默认值。该值直接驱动供给循环的 sleep:

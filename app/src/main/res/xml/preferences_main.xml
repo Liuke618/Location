@@ -18,7 +18,7 @@
             app:title="@string/setting_mock_write_interval"
             app:entries="@array/setting_mock_write_interval_entries"
             app:entryValues="@array/setting_mock_write_interval_values"
-            app:defaultValue="1000"
+            app:defaultValue="100"
             app:iconSpaceReserved="false"/>
 
     </PreferenceCategory>
