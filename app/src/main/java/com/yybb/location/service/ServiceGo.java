@@ -135,11 +135,17 @@ public class ServiceGo extends Service {
         Intent clickIntent = new Intent(this, MainActivity.class);
         PendingIntent clickPI = PendingIntent.getActivity(this, 1, clickIntent, PendingIntent.FLAG_IMMUTABLE);
 
+        //停止动作走本地广播交 MainActivity 而非服务内 stopSelf：本服务同时被 Activity 以 BIND_AUTO_CREATE 持有，
+        //绑定未解除时 stopSelf 销不掉服务、TestProvider 无从注销；由持绑方走控制器 stop()（解绑+stopService）才能完整清理
+        Intent stopIntent = new Intent(ServiceGoController.ACTION_STOP_MOCK).setPackage(getPackageName());
+        PendingIntent stopPI = PendingIntent.getBroadcast(this, 2, stopIntent, PendingIntent.FLAG_IMMUTABLE);
+
         Notification notification = new NotificationCompat.Builder(this, SERVICE_GO_NOTE_CHANNEL_ID)
                 .setChannelId(SERVICE_GO_NOTE_CHANNEL_ID)
                 .setContentTitle(getResources().getString(R.string.app_name))
                 .setContentText(getResources().getString(R.string.app_service_tips))
                 .setContentIntent(clickPI)
+                .addAction(R.drawable.ic_stop, getResources().getString(R.string.app_service_stop), stopPI)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .build();
 

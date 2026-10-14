@@ -1,9 +1,11 @@
 package com.yybb.location.ui.map;
 
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -33,6 +35,7 @@ import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.lifecycle.ViewModelProvider;
@@ -111,6 +114,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     private float mCurrentDirection = 0.0f;
     private boolean isFirstLoc = true; // 是否首次定位
     private MockLocationController mMockController;
+    private BroadcastReceiver mStopMockReceiver;
     private FloatingActionButton mButtonStart;
     /*============================== 历史记录 相关 ==============================*/
     private HistoryRepository mHistoryRepository;
@@ -201,6 +205,22 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         //模拟位置控制器：随 Activity 创建，随 Activity 一起废弃（生命周期约定见 ServiceGoController）
         mMockController = new ServiceGoController(this);
 
+        //通知栏"停止模拟"动作：经本地广播(setPackage+NOT_EXPORTED)由界面侧停服并复位按钮镜像——
+        //服务自身无从更新 UI 状态,且完整停服须由持绑方解绑(注销与 onCreate 注册成对,见 onDestroy)
+        mStopMockReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (mMockController.isRunning()) {
+                    mMockController.stop();
+                    //镜像模拟运行状态（MockLocationController 无回调，由调用点通知）
+                    mMainViewModel.setMockRunning(false);
+                    mButtonStart.setImageResource(R.drawable.ic_position);
+                }
+            }
+        };
+        ContextCompat.registerReceiver(this, mStopMockReceiver,
+                new IntentFilter(ServiceGoController.ACTION_STOP_MOCK), ContextCompat.RECEIVER_NOT_EXPORTED);
+
         initSearchView();
 
         //更新管线（检测/下载/安装）收编于 UpdateManager，随 Activity 创建并注册下载完成接收器
@@ -285,6 +305,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         }
         //下载完成接收器注销收编于 UpdateManager（与 init 注册成对）
         mUpdateManager.destroy();
+
+        //通知栏停止动作接收器,与 onCreate 注册成对
+        unregisterReceiver(mStopMockReceiver);
 
         unregisterCompassSensors();
 

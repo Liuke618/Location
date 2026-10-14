@@ -25,6 +25,10 @@ public class ServiceGoController implements MockLocationController {
     public static final String LNG_MSG_ID = "LNG_VALUE";
     public static final String ALT_MSG_ID = "ALT_VALUE";
 
+    /* 对外：通知栏"停止模拟"动作的本地广播 action（ServiceGo 通知按钮发出，MainActivity 动态注册接收，
+       停服须由持绑方走控制器 stop()，原因见 ServiceGo.initNotification） */
+    public static final String ACTION_STOP_MOCK = "com.yybb.location.action.STOP_MOCK";
+
     private final Context mActivityContext;
     private final ServiceConnection mConnection;
     private ServiceGo.ServiceGoBinder mServiceBinder;
