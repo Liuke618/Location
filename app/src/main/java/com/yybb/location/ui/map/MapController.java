@@ -1,17 +1,26 @@
 package com.yybb.location.ui.map;
 
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+
+import androidx.appcompat.content.res.AppCompatResources;
+import androidx.core.content.ContextCompat;
 
 import com.amap.api.maps.AMap;
 import com.amap.api.maps.CameraUpdateFactory;
 import com.amap.api.maps.LocationSource;
 import com.amap.api.maps.MapView;
+import com.amap.api.maps.model.BitmapDescriptor;
+import com.amap.api.maps.model.BitmapDescriptorFactory;
 import com.amap.api.maps.model.LatLng;
 import com.amap.api.maps.model.Marker;
 import com.amap.api.maps.model.MarkerOptions;
 import com.amap.api.maps.model.MyLocationStyle;
 import com.amap.api.maps.model.Poi;
 
+import com.yybb.location.R;
 import com.elvishew.xlog.XLog;
 
 /**
@@ -111,6 +120,29 @@ public class MapController {
     public void clearOverlays() {
         mAMap.clear();
         mMarker = null;
+    }
+
+    //GO 成功后以"模拟中"图标在传送点原位保留标记:选中点已由持有者消费置空,此标记只指示当前模拟位置
+    //(再选新点经 markMap 顶掉;停服时由持有者经 clearOverlays 清除)。锚点取中心,区别于底部尖端的选中图钉
+    public void markMockingPosition(LatLng gcjPoint) {
+        mAMap.clear();
+        mMarker = mAMap.addMarker(new MarkerOptions()
+                .position(gcjPoint)
+                .anchor(0.5f, 0.5f)
+                .icon(BitmapDescriptorFactory.fromBitmap(rasterize(R.drawable.ic_fly))));
+    }
+
+    //高德 fromResource 按 BitmapFactory 解码、不认向量资源,ic_fly 需经 Canvas 手动栅格化;
+    //原色纯白在浅色底图上对比不足,按主题青色(colorPrimary)着色
+    private Bitmap rasterize(int drawableRes) {
+        Drawable drawable = AppCompatResources.getDrawable(mMapView.getContext(), drawableRes).mutate();
+        drawable.setTint(ContextCompat.getColor(mMapView.getContext(), R.color.colorPrimary));
+        int width = drawable.getIntrinsicWidth();
+        int height = drawable.getIntrinsicHeight();
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        drawable.setBounds(0, 0, width, height);
+        drawable.draw(new Canvas(bitmap));
+        return bitmap;
     }
 
     // 在地图上显示位置

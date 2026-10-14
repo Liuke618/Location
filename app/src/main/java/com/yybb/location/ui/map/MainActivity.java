@@ -215,6 +215,10 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                     //镜像模拟运行状态（MockLocationController 无回调，由调用点通知）
                     mMainViewModel.setMockRunning(false);
                     mButtonStart.setImageResource(R.drawable.ic_position);
+                    //地图仅剩"模拟中"标记(无待传送选中点)时一并清掉;有新选中点则保留红点
+                    if (mMapState.getSelectedPoint() == null) {
+                        mMapController.clearOverlays();
+                    }
                 }
             }
         };
@@ -765,6 +769,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 mMockController.stop();
                 //镜像模拟运行状态（MockLocationController 无回调，由调用点通知）
                 mMainViewModel.setMockRunning(false);
+                mMapController.clearOverlays(); //模拟中标记随停服移除
                 Snackbar.make(v, "模拟位置已终止", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
                 mButtonStart.setImageResource(R.drawable.ic_position);
@@ -784,8 +789,10 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 //记住本次模拟位置(冷启动恢复用),须在选中点清除前落盘
                 saveLastPosition();
 
-                mMapController.clearOverlays();
+                //GO 成功:选中点消费置空,原位保留"模拟中"标记指示当前模拟位置
+                LatLng mockedPoint = mMapState.getSelectedPoint();
                 mMainViewModel.clearSelectedPoint();
+                mMapController.markMockingPosition(mockedPoint);
 
                 if (GoUtils.isWifiEnabled(MainActivity.this)) {
                     GoUtils.showDisableWifiDialog(MainActivity.this);
@@ -817,8 +824,10 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                     recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude, false);
                     //记住本次模拟位置(冷启动恢复用),须在选中点清除前落盘
                     saveLastPosition();
-                    mMapController.clearOverlays();
+                    //GO 成功:选中点消费置空,原位保留"模拟中"标记指示当前模拟位置
+                    LatLng mockedPoint = mMapState.getSelectedPoint();
                     mMainViewModel.clearSelectedPoint();
+                    mMapController.markMockingPosition(mockedPoint);
 
                     if (GoUtils.isWifiEnabled(MainActivity.this)) {
                         GoUtils.showDisableWifiDialog(MainActivity.this);

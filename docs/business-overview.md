@@ -61,8 +61,8 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 - **高德 Key 缺失引导**(`onCreate` 末尾判定一次):生效 key(`AmapUtils.getEffectiveApiKey`,设置自定义→清单内置)为空时弹窗——"去设置"跳 `SettingsActivity` 并经 `EXTRA_ANCHOR_KEY` 锚定滚动到 `setting_amap_api_key` 项,"如何获取"弹申请指引(`AmapKeyGuide`:步骤文案动态带入包名与当前安装包签名 SHA1,支持跳高德控制台、复制 SHA1),"稍后"关闭不打断使用,未配置则下次进主界面仍提示。key 下发在 Application 启动期,`onResume` 检测到设置页返回后已补配则 Toast"重启生效"(仅提示一次)。
 - **GO 按钮状态机**(`doGoLocation`,信息窗"传送"同路径):
   1. 前置校验:网络可用 → GPS 开启(否则分别提示/弹引导);
-  2. **未在模拟**:先探测"开发者选项→模拟位置信息应用"授权(`GoUtils.isAllowMockLocation`,实际 addTestProvider 试探),未授权弹引导框;选中点为空时尝试选**默认收藏**,仍无则提示"请先点击地图位置或者搜索位置";然后取选中点 `gcj02towgs84` 换算 + 偏好海拔(`setting_altitude`,非法回退 55.0)调用 `start()`——**start 返回 false(权限缺失/服务未起)时不动任何界面状态**,避免制造"已在模拟"假象;成功后:落定位历史(失败仅日志)、存上次位置、清覆盖物与选中点、按钮换"传送"图标,若 WiFi 开着再弹"定位闪回"警告;
-  3. **在模拟中**:选中点为空 → `stop()` 结束模拟(按钮复位);有选中点 → `setPosition()` 传送到新位置,返回 false(服务未连上)则提示并不清状态,成功则同 2 的收尾动作。
+  2. **未在模拟**:先探测"开发者选项→模拟位置信息应用"授权(`GoUtils.isAllowMockLocation`,实际 addTestProvider 试探),未授权弹引导框;选中点为空时尝试选**默认收藏**,仍无则提示"请先点击地图位置或者搜索位置";然后取选中点 `gcj02towgs84` 换算 + 偏好海拔(`setting_altitude`,非法回退 55.0)调用 `start()`——**start 返回 false(权限缺失/服务未起)时不动任何界面状态**,避免制造"已在模拟"假象;成功后:落定位历史(失败仅日志)、存上次位置、选中点消费置空(选中标记不在 GO 后消失,原位换"模拟中"图标保留——`MapController.markMockingPosition`,ic_fly 经 Canvas 栅格化并按 colorPrimary 着色,高德 fromResource 不认向量)、按钮换"传送"图标,若 WiFi 开着再弹"定位闪回"警告;
+  3. **在模拟中**:选中点为空 → `stop()` 结束模拟(按钮复位,"模拟中"标记随停服移除);有选中点 → `setPosition()` 传送到新位置,返回 false(服务未连上)则提示并不清状态,成功则同 2 的收尾动作("模拟中"标记移到新传送点)。通知栏"停止模拟"同样清标记——地图上无待传送选中点时才清,有新选中点则保留红点。
 - **生命周期约定**:MainActivity 声明 `configChanges`(orientation|screenSize|…)旋转不重建——重建路径会走 `onDestroy → mMockController.stop()`,转屏即静默停模拟;`onDestroy` 时若模拟在跑则停服务,并经 `CurrentLocationSource.destroy()` 彻底销毁定位客户端(运行中开关切换仍走 `stop()` 复用)、关蓝点、销毁地图。返回键=退后台(`moveTaskToBack`),模拟继续。
 - **静态门面**:`MainActivity.showLocation(name, lng, lat)` 委托当前 MapController,供历史/收藏页把行内坐标回填主界面选中点(参数语义已是 GCJ02,`bd09` 命名为历史遗留)。
 - **MainViewModel**:4 个 LiveData(选中点/mockRunning/当前地址/搜索结果)目前只是状态镜像,**无生产观察者**——渲染仍走"具体流程"直接调用(行为冻结);`mockRunning` 在 onDestroy 路径存在陈旧值问题(TODO)。
