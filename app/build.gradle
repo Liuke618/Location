@@ -140,7 +140,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.14.0'
     // NewerVersionAvailable：okhttp 5.x 为 Kotlin 重写的大版本升级，存在行为差异，暂维持 4.x 稳定线
     //noinspection NewerVersionAvailable
-    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.squareup.okhttp3:okhttp:5.5.0'
     // 高德 LBS 官方组合包(3dmap 11.3.100 + location 11.3.000 + search 9.8.1 一体),替代百度本地 jar。
     // 不用拆分三件套(3dmap:10.0.600/search:9.7.1/location:11.3.000):实测三者两两重复类冲突
     // (com.amap.apis.utils.core.api.* 三包皆有,且 3dmap 内嵌整个定位 SDK),无法共存编译;
