@@ -13,6 +13,8 @@ import java.util.Objects;
  * - 搜索行同 key 先删后插（去重覆盖，重插视为最新）
  * - 定位行同 WGS84 经纬度先删后插（去重覆盖），id 自增分配
  * - 读取按 timestamp 降序（稳定排序，同时间戳保持保存序）
+ * - 读侧永不失败（成功路径返回列表，不产生 null）：读失败返回 null 的语义仅由 SQLite 实现承载，
+ *   本替身锚定成功路径的行形与去重/排序契约
  */
 public class InMemoryHistoryRepository implements HistoryRepository {
     private final Map<String, SearchRow> mSearchRowsByKey = new LinkedHashMap<>();

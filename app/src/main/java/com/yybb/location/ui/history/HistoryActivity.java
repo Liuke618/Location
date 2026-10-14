@@ -128,7 +128,12 @@ public class HistoryActivity extends BaseActivity {
         List<Map<String, Object>> data = new ArrayList<>();
 
         try {
-            for (LocationRow row : mHistoryRepository.getLocationRows()) {
+            List<LocationRow> rows = mHistoryRepository.getLocationRows();
+            if (rows == null) {
+                // 存储读取失败:返回 null 交由 updateRecordList 提示,与空表(空列表)区分
+                return null;
+            }
+            for (LocationRow row : rows) {
                 Map<String, Object> item = new HashMap<>();
                 int ID = row.id;
                 String Location = row.location;
@@ -269,7 +274,13 @@ public class HistoryActivity extends BaseActivity {
     // 收藏既有历史行：按 id 取原始行，字段原样复制插入收藏表(收藏是复制不是移动，历史行保留)
     private void favoriteRecord(int ID) {
         try {
-            for (LocationRow row : mHistoryRepository.getLocationRows()) {
+            List<LocationRow> rows = mHistoryRepository.getLocationRows();
+            if (rows == null) {
+                // 存储读取失败按既有失败提示收口,与"行不存在"同文案
+                GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_mark_failed));
+                return;
+            }
+            for (LocationRow row : rows) {
                 if (row.id == ID) {
                     if (mHistoryRepository.addFavoriteRow(row)) {
                         GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_mark));
@@ -384,6 +395,11 @@ public class HistoryActivity extends BaseActivity {
 
     private void updateRecordList() {
         mAllRecord = fetchAllRecord();
+        if (mAllRecord == null) {
+            // 存储读取失败:提示后按空态渲染,用户可区分"没记录"与"读失败"
+            GoUtils.DisplayToast(this, getResources().getString(R.string.app_data_read_failed));
+            mAllRecord = new ArrayList<>();
+        }
 
         if (mAllRecord.isEmpty()) {
             mRecordListView.setVisibility(View.GONE);

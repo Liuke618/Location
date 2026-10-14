@@ -115,7 +115,7 @@ public class PoiSearchHelper {
 
     /**
      * 搜索历史行读取（原 onMenuItemActionExpand 展示与长按删除后重取的 getSearchRows 调用；
-     * SimpleAdapter 渲染属 UI，由调用方完成）
+     * SimpleAdapter 渲染属 UI，由调用方完成）。存储读取失败透传 null,由调用方提示。
      */
     public List<Map<String, Object>> loadSearchHistoryRows() {
         return mHistoryRepository.getSearchRows();

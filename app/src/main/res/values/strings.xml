@@ -43,6 +43,7 @@
     <string name="app_location_save_failed">位置保存失败，请重试</string>
     <string name="app_location_mark">已收藏</string>
     <string name="app_location_mark_failed">收藏失败，请重试</string>
+    <string name="app_data_read_failed">数据读取失败，请重试</string>
 
     <!-- 欢迎页 -->
     <string name="welcome_btn_txt">进入应用</string>

@@ -20,6 +20,7 @@ import java.util.Map;
  * 契约复刻既有 SQLite 调用面语义：
  * - 搜索行：同 key 先删后插（去重覆盖），读取按 timestamp 降序，行形为 6 键 Map（无 ID 列）
  * - 定位行：同 WGS84 经纬度先删后插（去重覆盖），读取按 timestamp 降序，行含自增 id
+ * - 读失败返回 null 的语义仅存在于 SQLite 实现（InMemory 永不失败，无法在此锚定）
  */
 public class HistoryRepositoryContractTest {
     private InMemoryHistoryRepository mRepository;

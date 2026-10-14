@@ -28,7 +28,7 @@ com.yybb.location          # 应用包名(applicationId/namespace)
 ```
 
 - UI 层**禁止**直接依赖 `ServiceGoBinder`——服务交互只走 `MockLocationController` 接口
-- DB 访问只走 `HistoryRepository`(接口),写侧去重语义继承自 database 包未动的 static helper
+- DB 访问只走 `HistoryRepository`(接口),写侧去重语义继承自 database 包未动的 static helper;读侧存储失败返回 null(区别于空表),历史/收藏/搜索历史入口据此提示
 - 跨组件状态(选中点/城市/标记图标)只经 `AppContainer` 的 `MapState` 单例(原 static 语义:selectedPoint 可空)
 - `MainViewModel` 是分阶段交付:4 个 LiveData 镜像**无生产观察者**——观察者接线会改变可观察行为,接线前先修 `mockRunning` 在 onDestroy 路径的陈旧值(TODO)
 

@@ -23,7 +23,7 @@ public interface HistoryRepository {
 
     /*============================== 搜索历史 ==============================*/
 
-    /** 按时间降序返回搜索历史行（行形与原 getSearchHistory 游标读取一致） */
+    /** 按时间降序返回搜索历史行（行形与原 getSearchHistory 游标读取一致）；存储读取失败返回 null（区别于空表的空列表，调用方须区分） */
     List<Map<String, Object>> getSearchRows();
 
     /** 保存搜索历史行（同 key 先删后插，去重覆盖语义） */
@@ -34,7 +34,7 @@ public interface HistoryRepository {
 
     /*============================== 定位历史 ==============================*/
 
-    /** 按时间降序返回定位历史原始行（含自增 id 与全部 6 个字段；展示格式化由调用方完成） */
+    /** 按时间降序返回定位历史原始行（含自增 id 与全部 6 个字段；展示格式化由调用方完成）；存储读取失败返回 null（区别于空表的空列表，调用方须区分） */
     List<LocationRow> getLocationRows();
 
     /** 保存定位历史行（同 WGS84 经纬度先删后插，去重覆盖语义；id 由存储层自增分配） */
@@ -54,7 +54,7 @@ public interface HistoryRepository {
 
     /*============================== 收藏 ==============================*/
 
-    /** 按时间降序返回收藏行（行形与定位历史一致，含自增 id；收藏不参与过期清理） */
+    /** 按时间降序返回收藏行（行形与定位历史一致，含自增 id；收藏不参与过期清理）；存储读取失败返回 null（区别于空表的空列表，调用方须区分） */
     List<LocationRow> getFavoriteRows();
 
     /** 保存收藏行（同 WGS84 经纬度先删后插，去重覆盖语义；id 由存储层自增分配） */
@@ -69,7 +69,7 @@ public interface HistoryRepository {
     /** 删除全部收藏行 */
     boolean clearAllFavoriteRows();
 
-    /** 按 WGS84 坐标精确匹配收藏行（字符串相等，与先删后插去重键同构；无命中返回 null） */
+    /** 按 WGS84 坐标精确匹配收藏行（字符串相等，与先删后插去重键同构）；无命中与读取失败都返回 null——默认收藏兜底按"无默认"处理，为既有设计 */
     LocationRow findFavoriteRowByWgsCoords(String lngWgs, String latWgs);
 
     /** 搜索历史行值对象（字段与 DataBaseHistorySearch 表列一一对应） */

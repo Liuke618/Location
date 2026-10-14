@@ -953,6 +953,11 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     //展示搜索历史（onMenuItemActionExpand 与长按删除后重取两处渲染块逐字一致，原样收编为共用方法）
     private void displaySearchHistory() {
         List<Map<String, Object>> data = mPoiSearchHelper.loadSearchHistoryRows();
+        if (data == null) {
+            // 存储读取失败:提示且不渲染历史面板(区别于"无搜索历史"的静默空态)
+            GoUtils.DisplayToast(this, getResources().getString(R.string.app_data_read_failed));
+            return;
+        }
 
         if (!data.isEmpty()) {
             SimpleAdapter simAdapt = new SimpleAdapter(

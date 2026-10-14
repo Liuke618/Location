@@ -136,7 +136,12 @@ public class FavoriteActivity extends BaseActivity {
         List<Map<String, Object>> data = new ArrayList<>();
 
         try {
-            for (LocationRow row : mHistoryRepository.getFavoriteRows()) {
+            List<LocationRow> rows = mHistoryRepository.getFavoriteRows();
+            if (rows == null) {
+                // 存储读取失败:返回 null 交由 updateRecordList 提示,与空表(空列表)区分
+                return null;
+            }
+            for (LocationRow row : rows) {
                 Map<String, Object> item = new HashMap<>();
                 int ID = row.id;
                 String Location = row.location;
@@ -484,6 +489,11 @@ public class FavoriteActivity extends BaseActivity {
 
     private void updateRecordList() {
         mAllRecord = fetchAllRecord();
+        if (mAllRecord == null) {
+            // 存储读取失败:提示后按空态渲染,用户可区分"没记录"与"读失败"
+            GoUtils.DisplayToast(this, getResources().getString(R.string.app_data_read_failed));
+            mAllRecord = new ArrayList<>();
+        }
 
         if (mAllRecord.isEmpty()) {
             mRecordListView.setVisibility(View.GONE);

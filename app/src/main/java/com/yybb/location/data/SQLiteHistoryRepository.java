@@ -16,7 +16,8 @@ import java.util.Map;
  * HistoryRepository 的 SQLite 实现：包住既有 DataBaseHistoryLocation/DataBaseHistorySearch。
  * 读写语义与原有调用面逐字段一致：保存先删后插（去重覆盖）、ID > 0 过滤、timestamp 降序。
  * 写侧异常仍只记 "DATABASE: ..." 日志，但会把成败回传给调用方——界面据此决定是否显示
- * "已保存/删除成功"，避免存储层静默失败时对用户谎报。
+ * "已保存/删除成功"，避免存储层静默失败时对用户谎报；读侧失败返回 null（空表返回空列表），
+ * 界面据此区分"没记录"与"读失败"。
  * 游标映射抽为纯函数由 SQLiteHistoryRepositoryMappingTest 锚定列序契约；SQLiteOpenHelper 本体
  * 不可 JVM 实例化，SQL 执行语义（先删后插去重/条件删除）由契约测试的 InMemory 替身覆盖。
  */
@@ -66,6 +67,7 @@ public class SQLiteHistoryRepository implements HistoryRepository {
             }
         } catch (Exception e) {
             XLog.e("DATABASE: getSearchRows error");
+            return null; // 存储读取失败与空表(空列表)对调用方可见地区分,由界面提示
         }
 
         return data;
@@ -130,6 +132,7 @@ public class SQLiteHistoryRepository implements HistoryRepository {
             }
         } catch (Exception e) {
             XLog.e("DATABASE: getLocationRows error");
+            return null; // 存储读取失败与空表(空列表)对调用方可见地区分,由界面提示
         }
 
         return data;
@@ -225,6 +228,7 @@ public class SQLiteHistoryRepository implements HistoryRepository {
             }
         } catch (Exception e) {
             XLog.e("DATABASE: getFavoriteRows error");
+            return null; // 存储读取失败与空表(空列表)对调用方可见地区分,由界面提示
         }
 
         return data;
