@@ -4,7 +4,7 @@
 
 ## 1. 应用定位
 
-GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德地图上选一个点(点选/搜索/手动输入坐标),应用通过系统 `LocationManager` 的 TestProvider 调试 API,以 100ms 周期持续向 GPS 与 NETWORK 两个位置供给源写入该点的 WGS84 坐标,使其他 App 读到伪造的"当前位置"。只做静态瞬移(一键 GO / 运行中传送),不模拟移动轨迹。
+GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德地图上选一个点(点选/搜索/手动输入坐标),应用通过系统 `LocationManager` 的 TestProvider 调试 API,以可配置周期(默认 1s)持续向 GPS 与 NETWORK 两个位置供给源写入该点的 WGS84 坐标,使其他 App 读到伪造的"当前位置"。只做静态瞬移(一键 GO / 运行中传送),不模拟移动轨迹。
 
 - 技术形态:纯 Java 单模块 `:app`,minSdk 31 / targetSdk 36,LBS 能力全部来自高德 3dmap-location-search 组合 SDK。
 - 入口链:WelcomeActivity(LAUNCHER,协议门控;已同意且定位权限仍在授时 onCreate 直接转进 MainActivity)→ MainActivity(地图选点主界面)→ ServiceGo(模拟定位前台服务)。
@@ -63,7 +63,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
   1. 前置校验:网络可用 → GPS 开启(否则分别提示/弹引导);
   2. **未在模拟**:先探测"开发者选项→模拟位置信息应用"授权(`GoUtils.isAllowMockLocation`,实际 addTestProvider 试探),未授权弹引导框;选中点为空时尝试选**默认收藏**,仍无则提示"请先点击地图位置或者搜索位置";然后取选中点 `gcj02towgs84` 换算 + 偏好海拔(`setting_altitude`,非法回退 55.0)调用 `start()`——**start 返回 false(权限缺失/服务未起)时不动任何界面状态**,避免制造"已在模拟"假象;成功后:落定位历史(失败仅日志)、存上次位置、清覆盖物与选中点、按钮换"传送"图标,若 WiFi 开着再弹"定位闪回"警告;
   3. **在模拟中**:选中点为空 → `stop()` 结束模拟(按钮复位);有选中点 → `setPosition()` 传送到新位置,返回 false(服务未连上)则提示并不清状态,成功则同 2 的收尾动作。
-- **生命周期约定**:MainActivity 声明 `configChanges`(orientation|screenSize|…)旋转不重建——重建路径会走 `onDestroy → mMockController.stop()`,转屏即静默停模拟;`onDestroy` 时若模拟在跑则停服务,并停定位、关蓝点、销毁地图。返回键=退后台(`moveTaskToBack`),模拟继续。
+- **生命周期约定**:MainActivity 声明 `configChanges`(orientation|screenSize|…)旋转不重建——重建路径会走 `onDestroy → mMockController.stop()`,转屏即静默停模拟;`onDestroy` 时若模拟在跑则停服务,并经 `CurrentLocationSource.destroy()` 彻底销毁定位客户端(运行中开关切换仍走 `stop()` 复用)、关蓝点、销毁地图。返回键=退后台(`moveTaskToBack`),模拟继续。
 - **静态门面**:`MainActivity.showLocation(name, lng, lat)` 委托当前 MapController,供历史/收藏页把行内坐标回填主界面选中点(参数语义已是 GCJ02,`bd09` 命名为历史遗留)。
 - **MainViewModel**:4 个 LiveData(选中点/mockRunning/当前地址/搜索结果)目前只是状态镜像,**无生产观察者**——渲染仍走"具体流程"直接调用(行为冻结);`mockRunning` 在 onDestroy 路径存在陈旧值问题(TODO)。
 
@@ -90,7 +90,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 
 **链路**:UI 只依赖 `MockLocationController` 接口(禁止直接碰 ServiceGoBinder)→ `ServiceGoController`(bind + startForegroundService,先自查定位权限,缺权拒启动)→ `ServiceGo`。
 
-- **ServiceGo.onCreate**:先 `startForeground`(三参,`foregroundServiceType="location"`,常驻通知点击回主界面)再检查定位权限(缺权则 stopSelf,满足 FGS 契约);随后移除并重建 GPS/NETWORK 两个 **TestProvider**(停用与注销各自成 try,且**不再以"provider 当前是否启用"为前提**——进程被强杀后留下的是"已注册但未启用"的 provider,旧写法永远删不掉,卸载后系统仍挂着假 provider;provider 已存在时复用而非崩溃),最后在专用 HandlerThread 上启动 **100ms 周期供给循环**。
+- **ServiceGo.onCreate**:先 `startForeground`(三参,`foregroundServiceType="location"`,常驻通知点击回主界面)再检查定位权限(缺权则 stopSelf,满足 FGS 契约);随后移除并重建 GPS/NETWORK 两个 **TestProvider**(停用与注销各自成 try,且**不再以"provider 当前是否启用"为前提**——进程被强杀后留下的是"已注册但未启用"的 provider,旧写法永远删不掉,卸载后系统仍挂着假 provider;provider 已存在时复用而非崩溃),最后在专用 HandlerThread 上启动 **周期供给循环**(周期读自设置项 `setting_mock_write_interval`,默认 1000ms,档位 100/500/1000/2000/5000ms,解析兜底走 `GoUtils.parseMockWriteIntervalMs`;每 tick 读取一次,设置页修改即时生效)。
 - **供给内容**:每周期向两个 TestProvider 各写一条固定位置——GPS(精度 1m,附"7 颗卫星" extras)、NETWORK(精度 2m),时间为实时(当前毫秒/elapsedRealtime),坐标为 GO 时换算好的 **WGS84**。
 - **运行中传送**:`setPosition` 更新坐标并立即触发下一轮供给。目标三轴经 `PositionPublisher` 装在**不可变快照**里整体发布(主线程写、供给线程读):三个独立 `double` 字段允许供给线程读到"新经度配旧纬度"的串样坐标,回归用例见 `PositionPublisherTest.concurrentPublish_neverExposesMixedAxes`。
 - **可靠性约定**:`onStartCommand` 刻意 `START_NOT_STICKY`——进程被回收后**不自动恢复**模拟(避免无人知情地持续供给假定位);停止标志 `volatile`(主线程 onDestroy 写、供给线程读);默认坐标为济南(36.667662, 117.027707, 海拔 55,常量在 `PositionPublisher.DEFAULT_*`)。
@@ -134,6 +134,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 | 分组 | 键 | 含义 | 消费方 |
 |------|----|------|--------|
 | 移动 | `setting_altitude` | 模拟海拔(默认 55.0) | GO 时写入 WGS84 高度 |
+| 移动 | `setting_mock_write_interval` | 模拟位置写入频率(默认 1 秒,档位 100ms/500ms/1s/2s/5s,修改即时生效) | ServiceGo 供给循环周期 |
 | 位置偏移 | `setting_random_offset` | 随机偏移开关(默认关) | 历史/收藏页点击行 |
 | 位置偏移 | `setting_lat_max_offset` / `setting_lon_max_offset` | 纬/经度偏移上限米(默认 10) | 同上 |
 | 地图定位 | `setting_locate_self` | 定位自己的位置开关(默认关) | MainActivity.onResume(定位图层启停 + 回到当前位置按钮显隐,见 §4) |
@@ -154,7 +155,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 
 ### 12.2 数据存储
 
-三库一偏好,全部只经 `HistoryRepository` 接口访问(SQLite 实现包住三个 SQLiteOpenHelper;写侧去重统一"先删后插";写操作成败回传 UI,失败不谎报成功):
+三库一偏好,全部只经 `HistoryRepository` 接口访问(SQLite 实现包住三个 SQLiteOpenHelper;写侧去重统一"先删后插";写操作成败回传 UI,失败不谎报成功;游标映射抽为纯函数,列序契约由 `SQLiteHistoryRepositoryMappingTest`(自绘 FakeCursor)JVM 锚定,SQL 执行语义由契约测试的 InMemory 替身覆盖):
 
 | 库 | 版本 | 内容 |
 |----|------|------|

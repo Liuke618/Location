@@ -53,6 +53,22 @@
     <string name="setting_group_move">位置模拟</string>
     <string name="setting_altitude">海拔高度(米)</string>
     <string name="setting_altitude_default">55.0</string>
+    <string name="setting_mock_write_interval">模拟位置写入频率</string>
+    <string-array name="setting_mock_write_interval_entries">
+        <item>100 毫秒</item>
+        <item>500 毫秒</item>
+        <item>1 秒</item>
+        <item>2 秒</item>
+        <item>5 秒</item>
+    </string-array>
+    <string-array name="setting_mock_write_interval_values">
+        <item>100</item>
+        <item>500</item>
+        <item>1000</item>
+        <item>2000</item>
+        <item>5000</item>
+    </string-array>
+    <string name="setting_mock_write_interval_summary">模拟位置按此周期持续写入;默认 1 秒,修改即时生效。周期越短定位刷新越快、越耗电(当前:%s)</string>
 
     <!-- 位置偏移相关参数 -->
     <string name="setting_group_location_offset">位置偏移</string>

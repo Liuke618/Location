@@ -13,6 +13,14 @@
             app:summary="@string/setting_altitude_default"
             app:iconSpaceReserved="false"/>
 
+        <ListPreference
+            app:key="setting_mock_write_interval"
+            app:title="@string/setting_mock_write_interval"
+            app:entries="@array/setting_mock_write_interval_entries"
+            app:entryValues="@array/setting_mock_write_interval_values"
+            app:defaultValue="1000"
+            app:iconSpaceReserved="false"/>
+
     </PreferenceCategory>
 
     <PreferenceCategory

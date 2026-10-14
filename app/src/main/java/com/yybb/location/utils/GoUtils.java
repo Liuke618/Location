@@ -196,6 +196,28 @@ public class GoUtils {
         return Double.isFinite(parsed) ? parsed : fallback;
     }
 
+    /** 模拟位置写入周期默认值(毫秒)。原服务硬编码 100ms,现周期由设置项驱动,此值是解析兜底档 */
+    public static final long DEFAULT_MOCK_WRITE_INTERVAL_MS = 1000L;
+
+    /**
+     * 解析模拟位置写入周期设置(毫秒),非法或非正数回退默认值。该值直接驱动供给循环的 sleep:
+     * 空串/非数字让设置无效,0/负数会让循环空转,均不可直接采信。
+     */
+    public static long parseMockWriteIntervalMs(String value) {
+        if (value == null) {
+            return DEFAULT_MOCK_WRITE_INTERVAL_MS;
+        }
+
+        long parsed;
+        try {
+            parsed = Long.parseLong(value.trim());
+        } catch (NumberFormatException e) {
+            return DEFAULT_MOCK_WRITE_INTERVAL_MS;
+        }
+
+        return parsed > 0 ? parsed : DEFAULT_MOCK_WRITE_INTERVAL_MS;
+    }
+
     /**
      * 解析库内存量坐标串（收藏/历史行的经纬度列），返回 {经度, 纬度}；任一轴缺失/非数字/非有限即回 null。
      * 这类串不是用户当下输入，而是可能由旧版本写入或被外部改过的表数据：原调用点（默认收藏恢复）直接

@@ -23,7 +23,7 @@ com.yybb.location          # 应用包名(applicationId/namespace)
 ├── ui.map      # MainActivity、MainViewModel、MapState、MapController、GeocoderHelper
 ├── ui.search|location|update|settings|history|favorite、ui.WelcomeActivity
 ├── data        # HistoryRepository(+SQLite 实现/内存 fake)、DataBaseHistory*
-├── service     # MockLocationController 接口、ServiceGoController、ServiceGo(前台服务,100ms 周期经 TestProvider 持续供给固定位置)
+├── service     # MockLocationController 接口、ServiceGoController、ServiceGo(前台服务,按设置项周期经 TestProvider 持续供给固定位置,默认 1s,档位 100ms~5s)
 └── utils
 ```
 

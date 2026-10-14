@@ -25,13 +25,15 @@ import android.os.SystemClock;
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
+import androidx.preference.PreferenceManager;
 
 import com.elvishew.xlog.XLog;
 import com.yybb.location.ui.map.MainActivity;
 import com.yybb.location.R;
+import com.yybb.location.utils.GoUtils;
 
 /**
- * 模拟定位前台服务：以 100ms 周期经 TestProvider 持续供给固定位置；
+ * 模拟定位前台服务：按设置项周期(默认 1s,设置页"模拟位置写入频率"可调、修改即时生效)经 TestProvider 持续供给固定位置；
  * UI 只经 MockLocationController 接口启停与查询，禁止直接依赖 ServiceGoBinder。
  */
 public class ServiceGo extends Service {
@@ -44,7 +46,7 @@ public class ServiceGo extends Service {
     private HandlerThread mLocHandlerThread;
     private Handler mLocHandler;
     // 主线程(onDestroy)写、HandlerThread(handleMessage)读，缺 volatile 时停止标记可能永不可见，
-    // 服务已销毁却仍按 100ms 周期供给模拟位置
+    // 服务已销毁却仍按设定周期供给模拟位置
     private volatile boolean isStop = false;
     // 通知栏消息
     private static final int SERVICE_GO_NOTE_ID = 1;
@@ -155,7 +157,7 @@ public class ServiceGo extends Service {
             @Override
             public void handleMessage(@NonNull Message msg) {
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(readMockWriteIntervalMs());
 
                     if (!isStop) {
                         setLocationNetwork();
@@ -171,6 +173,12 @@ public class ServiceGo extends Service {
         };
 
         mLocHandler.sendEmptyMessage(HANDLER_MSG_ID);
+    }
+
+    /** 供给周期读自设置项(默认 1s)。每 tick 读一次:SharedPreferences 有内存缓存,开销可忽略,设置页修改即时生效 */
+    private long readMockWriteIntervalMs() {
+        return GoUtils.parseMockWriteIntervalMs(PreferenceManager.getDefaultSharedPreferences(this)
+                .getString("setting_mock_write_interval", null));
     }
 
     /**

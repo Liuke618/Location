@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.text.InputType;
 
 import androidx.preference.EditTextPreference;
+import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.SwitchPreferenceCompat;
@@ -52,6 +53,15 @@ public class FragmentSettings extends PreferenceFragmentCompat {
 
         EditTextPreference pfLonOffset = findPreference("setting_lon_max_offset");
         setupDecimalEditTextPreference(pfLonOffset);
+
+        // 模拟位置写入频率:摘要=当前档位+说明(SimpleSummaryProvider 只回显档位,不带解释文案)
+        ListPreference pfMockInterval = findPreference("setting_mock_write_interval");
+        if (pfMockInterval != null) {
+            pfMockInterval.setSummaryProvider((Preference.SummaryProvider<ListPreference>) pref -> {
+                CharSequence entry = pref.getEntry();
+                return getString(R.string.setting_mock_write_interval_summary, entry == null ? "" : entry);
+            });
+        }
 
         // 高德 API Key：摘要只显示配置状态、不回显明文；允许留空(回落内置 Key)，不做非空校验
         EditTextPreference pfAmapKey = findPreference(AmapUtils.PREF_KEY_AMAP_API_KEY);

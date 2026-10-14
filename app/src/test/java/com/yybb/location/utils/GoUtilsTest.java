@@ -143,4 +143,21 @@ public class GoUtilsTest {
         assertNull(GoUtils.parseStoredCoordinatePair("NaN", "39.9"));
         assertNull(GoUtils.parseStoredCoordinatePair("116.4", "Infinity"));
     }
+
+    @Test
+    public void parseMockWriteIntervalMs_validValues_returnParsed() {
+        assertEquals(100L, GoUtils.parseMockWriteIntervalMs("100"));
+        assertEquals(1000L, GoUtils.parseMockWriteIntervalMs("1000"));
+        assertEquals(5000L, GoUtils.parseMockWriteIntervalMs(" 5000 "));
+    }
+
+    @Test
+    public void parseMockWriteIntervalMs_invalidOrNonPositive_fallBackToDefault() {
+        // 周期直接驱动供给循环的 sleep:脏值轻则设置无效,0/负数会让循环空转,一律回默认 1s
+        assertEquals(GoUtils.DEFAULT_MOCK_WRITE_INTERVAL_MS, GoUtils.parseMockWriteIntervalMs(null));
+        assertEquals(GoUtils.DEFAULT_MOCK_WRITE_INTERVAL_MS, GoUtils.parseMockWriteIntervalMs(""));
+        assertEquals(GoUtils.DEFAULT_MOCK_WRITE_INTERVAL_MS, GoUtils.parseMockWriteIntervalMs("abc"));
+        assertEquals(GoUtils.DEFAULT_MOCK_WRITE_INTERVAL_MS, GoUtils.parseMockWriteIntervalMs("0"));
+        assertEquals(GoUtils.DEFAULT_MOCK_WRITE_INTERVAL_MS, GoUtils.parseMockWriteIntervalMs("-500"));
+    }
 }
