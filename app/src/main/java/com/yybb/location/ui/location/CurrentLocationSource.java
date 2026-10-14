@@ -74,6 +74,18 @@ public class CurrentLocationSource implements LocationSource {
         }
     }
 
+    /**
+     * 彻底释放定位客户端(客户端持有 Activity Context,只在持有者销毁时调用)。
+     * 运行中"定位自己的位置"开关切换仍走 stop(),复用客户端避免反复重建。
+     */
+    public void destroy() {
+        if (mLocClient != null) {
+            mLocClient.stopLocation();
+            mLocClient.onDestroy();
+            mLocClient = null;
+        }
+    }
+
     //请求一次定位(连续定位模式下触发一次即时请求)
     public void requestLocation() {
         start();

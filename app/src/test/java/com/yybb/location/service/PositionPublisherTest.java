@@ -65,7 +65,7 @@ public class PositionPublisherTest {
 
     @Test(timeout = 30_000)
     public void concurrentPublish_neverExposesMixedAxes() throws Exception {
-        // 每个写入方发布的三元组都自洽（三轴同值），读线程只要观察到三轴不同即串样。
+        // 每个写入方发布的三元组都自洽（三轴同值）；三轴不同且不是内置默认点才是串样。
         // 串样例留到断言消息里，便于区分"新经度配旧纬度"与 double 位撕裂。
         final int writerCount = 2;
         final int publishesPerWriter = 50_000;
@@ -95,8 +95,15 @@ public class PositionPublisherTest {
                     PositionPublisher.Snapshot snapshot = publisher.current();
                     readCount.incrementAndGet();
                     if (snapshot.lat != snapshot.lng || snapshot.lat != snapshot.alt) {
-                        mixedObservation.compareAndSet(null, describe(snapshot));
-                        return;
+                        // 内置默认点三轴本就互不相同，但它是不可变快照、自洽而非串样；
+                        // 读线程抢在首次 publish 前到达时观察到的就是它，不能误报
+                        boolean builtInDefault = snapshot.lng == PositionPublisher.DEFAULT_LNG
+                                && snapshot.lat == PositionPublisher.DEFAULT_LAT
+                                && snapshot.alt == PositionPublisher.DEFAULT_ALT;
+                        if (!builtInDefault) {
+                            mixedObservation.compareAndSet(null, describe(snapshot));
+                            return;
+                        }
                     }
                 }
             });

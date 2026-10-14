@@ -17,6 +17,8 @@ import java.util.Map;
  * 读写语义与原有调用面逐字段一致：保存先删后插（去重覆盖）、ID > 0 过滤、timestamp 降序。
  * 写侧异常仍只记 "DATABASE: ..." 日志，但会把成败回传给调用方——界面据此决定是否显示
  * "已保存/删除成功"，避免存储层静默失败时对用户谎报。
+ * 游标映射抽为纯函数由 SQLiteHistoryRepositoryMappingTest 锚定列序契约；SQLiteOpenHelper 本体
+ * 不可 JVM 实例化，SQL 执行语义（先删后插去重/条件删除）由契约测试的 InMemory 替身覆盖。
  */
 public class SQLiteHistoryRepository implements HistoryRepository {
     private final DataBaseHistoryLocation mLocationDBHelper;
@@ -55,27 +57,30 @@ public class SQLiteHistoryRepository implements HistoryRepository {
     public List<Map<String, Object>> getSearchRows() {
         List<Map<String, Object>> data = new ArrayList<>();
 
-        try {
-            Cursor cursor = mSearchDB.query(DataBaseHistorySearch.TABLE_NAME, null,
-                    DataBaseHistorySearch.DB_COLUMN_ID + " > ?", new String[]{"0"},
-                    null, null, DataBaseHistorySearch.DB_COLUMN_TIMESTAMP + " DESC", null);
+        try (Cursor cursor = mSearchDB.query(DataBaseHistorySearch.TABLE_NAME, null,
+                DataBaseHistorySearch.DB_COLUMN_ID + " > ?", new String[]{"0"},
+                null, null, DataBaseHistorySearch.DB_COLUMN_TIMESTAMP + " DESC", null)) {
 
             while (cursor.moveToNext()) {
-                Map<String, Object> searchHistoryItem = new HashMap<>();
-                searchHistoryItem.put(DB_COLUMN_KEY, cursor.getString(1));
-                searchHistoryItem.put(DB_COLUMN_DESCRIPTION, cursor.getString(2));
-                searchHistoryItem.put(DB_COLUMN_TIMESTAMP, "" + cursor.getInt(3));
-                searchHistoryItem.put(DB_COLUMN_IS_LOCATION, "" + cursor.getInt(4));
-                searchHistoryItem.put(DB_COLUMN_LONGITUDE_CUSTOM, cursor.getString(7));
-                searchHistoryItem.put(DB_COLUMN_LATITUDE_CUSTOM, cursor.getString(8));
-                data.add(searchHistoryItem);
+                data.add(searchRowFromCursor(cursor));
             }
-            cursor.close();
         } catch (Exception e) {
             XLog.e("DATABASE: getSearchRows error");
         }
 
         return data;
+    }
+
+    /** 游标→搜索历史 Map 行(6 键旧行形:坐标只取 CUSTOM 双列,WGS84 双列不入 Map;int 列转字符串) */
+    static Map<String, Object> searchRowFromCursor(Cursor cursor) {
+        Map<String, Object> searchHistoryItem = new HashMap<>();
+        searchHistoryItem.put(DB_COLUMN_KEY, cursor.getString(1));
+        searchHistoryItem.put(DB_COLUMN_DESCRIPTION, cursor.getString(2));
+        searchHistoryItem.put(DB_COLUMN_TIMESTAMP, "" + cursor.getInt(3));
+        searchHistoryItem.put(DB_COLUMN_IS_LOCATION, "" + cursor.getInt(4));
+        searchHistoryItem.put(DB_COLUMN_LONGITUDE_CUSTOM, cursor.getString(7));
+        searchHistoryItem.put(DB_COLUMN_LATITUDE_CUSTOM, cursor.getString(8));
+        return searchHistoryItem;
     }
 
     @Override
@@ -116,26 +121,29 @@ public class SQLiteHistoryRepository implements HistoryRepository {
     public List<LocationRow> getLocationRows() {
         List<LocationRow> data = new ArrayList<>();
 
-        try {
-            Cursor cursor = mLocationDB.query(DataBaseHistoryLocation.TABLE_NAME, null,
-                    DataBaseHistoryLocation.DB_COLUMN_ID + " > ?", new String[]{"0"},
-                    null, null, DataBaseHistoryLocation.DB_COLUMN_TIMESTAMP + " DESC", null);
+        try (Cursor cursor = mLocationDB.query(DataBaseHistoryLocation.TABLE_NAME, null,
+                DataBaseHistoryLocation.DB_COLUMN_ID + " > ?", new String[]{"0"},
+                null, null, DataBaseHistoryLocation.DB_COLUMN_TIMESTAMP + " DESC", null)) {
 
             while (cursor.moveToNext()) {
-                data.add(new LocationRow(cursor.getInt(0),
-                        cursor.getString(1),
-                        cursor.getString(2),
-                        cursor.getString(3),
-                        cursor.getLong(4),
-                        cursor.getString(5),
-                        cursor.getString(6)));
+                data.add(locationRowFromCursor(cursor));
             }
-            cursor.close();
         } catch (Exception e) {
             XLog.e("DATABASE: getLocationRows error");
         }
 
         return data;
+    }
+
+    /** 游标→定位/收藏行(自增 id + 6 字段,列序 0..6 与建表语句一致) */
+    static LocationRow locationRowFromCursor(Cursor cursor) {
+        return new LocationRow(cursor.getInt(0),
+                cursor.getString(1),
+                cursor.getString(2),
+                cursor.getString(3),
+                cursor.getLong(4),
+                cursor.getString(5),
+                cursor.getString(6));
     }
 
     @Override
@@ -208,21 +216,13 @@ public class SQLiteHistoryRepository implements HistoryRepository {
     public List<LocationRow> getFavoriteRows() {
         List<LocationRow> data = new ArrayList<>();
 
-        try {
-            Cursor cursor = mFavoriteDB.query(DataBaseFavoriteLocation.TABLE_NAME, null,
-                    DataBaseFavoriteLocation.DB_COLUMN_ID + " > ?", new String[]{"0"},
-                    null, null, DataBaseFavoriteLocation.DB_COLUMN_TIMESTAMP + " DESC", null);
+        try (Cursor cursor = mFavoriteDB.query(DataBaseFavoriteLocation.TABLE_NAME, null,
+                DataBaseFavoriteLocation.DB_COLUMN_ID + " > ?", new String[]{"0"},
+                null, null, DataBaseFavoriteLocation.DB_COLUMN_TIMESTAMP + " DESC", null)) {
 
             while (cursor.moveToNext()) {
-                data.add(new LocationRow(cursor.getInt(0),
-                        cursor.getString(1),
-                        cursor.getString(2),
-                        cursor.getString(3),
-                        cursor.getLong(4),
-                        cursor.getString(5),
-                        cursor.getString(6)));
+                data.add(locationRowFromCursor(cursor));
             }
-            cursor.close();
         } catch (Exception e) {
             XLog.e("DATABASE: getFavoriteRows error");
         }
@@ -283,25 +283,16 @@ public class SQLiteHistoryRepository implements HistoryRepository {
 
     @Override
     public LocationRow findFavoriteRowByWgsCoords(String lngWgs, String latWgs) {
-        try {
-            Cursor cursor = mFavoriteDB.query(DataBaseFavoriteLocation.TABLE_NAME, null,
-                    DataBaseFavoriteLocation.DB_COLUMN_LONGITUDE_WGS84 + " = ? AND " +
-                            DataBaseFavoriteLocation.DB_COLUMN_LATITUDE_WGS84 + " = ?",
-                    new String[]{lngWgs, latWgs},
-                    null, null, null, null);
+        try (Cursor cursor = mFavoriteDB.query(DataBaseFavoriteLocation.TABLE_NAME, null,
+                DataBaseFavoriteLocation.DB_COLUMN_LONGITUDE_WGS84 + " = ? AND " +
+                        DataBaseFavoriteLocation.DB_COLUMN_LATITUDE_WGS84 + " = ?",
+                new String[]{lngWgs, latWgs},
+                null, null, null, null)) {
 
-            LocationRow row = null;
             if (cursor.moveToNext()) {
-                row = new LocationRow(cursor.getInt(0),
-                        cursor.getString(1),
-                        cursor.getString(2),
-                        cursor.getString(3),
-                        cursor.getLong(4),
-                        cursor.getString(5),
-                        cursor.getString(6));
+                return locationRowFromCursor(cursor);
             }
-            cursor.close();
-            return row;
+            return null;
         } catch (Exception e) {
             XLog.e("DATABASE: findFavoriteRowByWgsCoords error");
             return null;

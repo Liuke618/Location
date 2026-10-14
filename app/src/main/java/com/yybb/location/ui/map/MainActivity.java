@@ -292,7 +292,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         sMapController = null;
 
         // 退出时销毁定位
-        mCurrentLocationSource.stop();
+        mCurrentLocationSource.destroy();
         // 关闭定位图层
         mMapController.getAMap().setMyLocationEnabled(false);
         mMapController.onDestroy();

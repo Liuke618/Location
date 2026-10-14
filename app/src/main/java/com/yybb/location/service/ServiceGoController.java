@@ -41,7 +41,10 @@ public class ServiceGoController implements MockLocationController {
 
             @Override
             public void onServiceDisconnected(ComponentName name) {
-
+                // 服务进程死亡后旧 binder 不可再调用，置空让后续 setPosition 走"未连接"分支而不是打到失效对象上；
+                // BIND_AUTO_CREATE 下系统会重启服务并回调 onServiceConnected 恢复引用
+                mServiceBinder = null;
+                XLog.e("SERVICEGO: onServiceDisconnected");
             }
         };
     }
@@ -70,7 +73,13 @@ public class ServiceGoController implements MockLocationController {
 
     @Override
     public void stop() {
-        mActivityContext.unbindService(mConnection); // 解绑服务，服务要记得解绑，不要造成内存泄漏
+        try {
+            mActivityContext.unbindService(mConnection); // 解绑服务，服务要记得解绑，不要造成内存泄漏
+        } catch (IllegalArgumentException e) {
+            // 从未成功 bind（如 start 阶段被权限拒绝后的收尾）时 unbind 会抛 IllegalArgumentException，忽略即可
+            XLog.e("SERVICEGO: stop skipped - service not bound");
+        }
+        mServiceBinder = null;
         Intent serviceGoIntent = new Intent(mActivityContext, ServiceGo.class);
         mActivityContext.stopService(serviceGoIntent);
         isMockServStart = false;
@@ -89,6 +98,8 @@ public class ServiceGoController implements MockLocationController {
 
     @Override
     public boolean isRunning() {
+        // 本地标志：只反映本控制器的 start/stop 调用史，不查询服务真实存活（服务被杀后仍可能返回 true，
+        // 配合 stop() 的 try/catch unbind 与 setPosition 判空兜底，不做跨进程状态查询）
         return isMockServStart;
     }
 
