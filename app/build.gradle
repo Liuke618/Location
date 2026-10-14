@@ -154,5 +154,5 @@ dependencies {
     // 引入真实 org.json 构件（仅测试作用域）供 UpdateManagerTest 解析真实 JSON（UpdateManager.parseRelease）
     // NewerVersionAvailable：测试作用域刻意固定版本，与 okhttp 同模式
     //noinspection NewerVersionAvailable
-    testImplementation 'org.json:json:20240303'
+    testImplementation 'org.json:json:20260814'
 }
