@@ -475,6 +475,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 Uri uri = Uri.parse("https://gitee.com/itexp/gogogo/issues");
                 Intent intent = new Intent(Intent.ACTION_VIEW, uri);
                 startActivity(intent);
+            } else if (id == R.id.nav_donate) {
+                showDonateDialog();
             }
 
             DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -487,6 +489,31 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         View headerView = mNavigationView.getHeaderView(0);
         TextView app_version = headerView.findViewById(R.id.app_version);
         app_version.setText(GoUtils.getVersionName(this));
+    }
+
+    /*============================== 请作者喝杯咖啡 ==============================*/
+
+    /* 支付宝收款码内容,换收款码图片时须与此处及 drawable-nodpi/donate_alipay.jpg 一并更新 */
+    private static final String DONATE_ALIPAY_QR_URL = "https://qr.alipay.com/fkx12229xxaytmszvol0w70";
+
+    /* 弹出打赏弹窗:大图展示支付宝收款码,长按图片经系统分发跳转支付宝付款 */
+    private void showDonateDialog() {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_donate, null);
+        ImageView qrView = view.findViewById(R.id.iv_donate_alipay);
+        qrView.setOnLongClickListener(v -> {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(DONATE_ALIPAY_QR_URL)));
+            } catch (Exception e) {
+                // 既无浏览器又未装支付宝的极端场景兜底:提示改用截图扫码,不打断弹窗
+                XLog.e("MainActivity: ERROR - open donate alipay");
+                GoUtils.DisplayToast(this, getResources().getString(R.string.donate_jump_failed));
+            }
+            return true;
+        });
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.donate_dialog_title)
+                .setView(view)
+                .show();
     }
 
     /*============================== 主界面地图 相关 ==============================*/

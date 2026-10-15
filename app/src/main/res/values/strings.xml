@@ -151,6 +151,11 @@
     <string name="nav_menu_upgrade">检测更新</string>
     <string name="nav_menu_feedback">问题反馈</string>
     <string name="nav_menu_contact">联系作者</string>
+    <string name="nav_menu_donate">请作者喝杯咖啡</string>
+    <string name="donate_dialog_title">请作者喝杯咖啡</string>
+    <string name="donate_dialog_hint">长按二维码跳转支付宝付款</string>
+    <string name="donate_alipay_desc">支付宝收款码，长按跳转支付宝付款</string>
+    <string name="donate_jump_failed">未能打开支付宝，请截图收款码后用支付宝扫一扫识别</string>
     <string name="nav_app_tips">仅供学习使用，否则后果自负!</string>
 
     <!-- 主界面 -->
