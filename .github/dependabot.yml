@@ -22,5 +22,7 @@ updates:
     reviewers:
       - "ZCShou"
     ignore:
+      # okhttp 5.x 为 Kotlin 多平台重写：Android 端变体解析为 okhttp-android(AAR)，要求 compileSdk≥37，
+      # 与本仓库锁定 compileSdk 36 冲突(checkDebugAarMetadata 拦截)；4.x 内小版本亦按"刻意固定版本"策略忽略
       - dependency-name: "com.squareup.okhttp3:okhttp"
-        versions: ["4.x"]
+        versions: ["4.x", "5.x"]
