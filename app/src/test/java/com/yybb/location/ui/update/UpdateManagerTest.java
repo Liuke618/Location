@@ -5,11 +5,14 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import android.app.DownloadManager;
+
 import org.json.JSONException;
 import org.junit.Test;
 
 /**
- * UpdateManager 纯函数 JVM 单测（无 Android 依赖）：release 解析、版本比较、下载地址同源校验。
+ * UpdateManager 纯函数 JVM 单测（无 Android 依赖）：release 解析、版本比较、下载地址同源校验、
+ * 下载状态判定。
  * 语义锚定原 MainActivity.checkUpdateVersion 更新对话框组装的 JSON 读取（行为冻结）：
  * name/tag_name/created_at/target_commitish/body 直接 getString；assets 经 getString 后二次
  * new JSONArray 解析再取 assets[0] 的 browser_download_url/name；
@@ -195,5 +198,21 @@ public class UpdateManagerTest {
         assertFalse(UpdateManager.isTrustedDownloadUrl("https://github.com/Liuke618/Location/a b.apk", SELF_SLUG));
         assertFalse(UpdateManager.isTrustedDownloadUrl(
                 "https://github.com/Liuke618/Location/releases/download/v1.2.3/app.apk", ""));
+    }
+
+    @Test
+    public void classifyDownloadStatus_successOrFailedTerminal_othersKeepWaiting() {
+        // 成功→安装、失败→收口报错；其余状态（含等网络的 PAUSED）交给系统自行推进
+        // DownloadManager 常量为编译期内联值，JVM 测试可直接引用，不触发 android.jar stub
+        assertEquals(UpdateManager.POLL_INSTALL,
+                UpdateManager.classifyDownloadStatus(DownloadManager.STATUS_SUCCESSFUL));
+        assertEquals(UpdateManager.POLL_FAIL,
+                UpdateManager.classifyDownloadStatus(DownloadManager.STATUS_FAILED));
+        assertEquals(UpdateManager.POLL_KEEP_WAITING,
+                UpdateManager.classifyDownloadStatus(DownloadManager.STATUS_PENDING));
+        assertEquals(UpdateManager.POLL_KEEP_WAITING,
+                UpdateManager.classifyDownloadStatus(DownloadManager.STATUS_RUNNING));
+        assertEquals(UpdateManager.POLL_KEEP_WAITING,
+                UpdateManager.classifyDownloadStatus(DownloadManager.STATUS_PAUSED));
     }
 }

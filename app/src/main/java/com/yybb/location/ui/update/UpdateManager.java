@@ -8,7 +8,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.Window;
@@ -160,6 +163,27 @@ public class UpdateManager {
         }
     }
 
+    /* 下载状态轮询的判定结果：继续等下一轮 / 触发安装 / 按失败收口 */
+    static final int POLL_KEEP_WAITING = 0;
+    static final int POLL_INSTALL = 1;
+    static final int POLL_FAIL = 2;
+
+    /**
+     * 纯函数：一次系统下载状态 → 后续动作。
+     * SUCCESSFUL 直接触发安装（与完成广播互为兜底，安装侧另有只放行一次的闸）；
+     * FAILED 收口报错——DownloadManager 失败不发 ACTION_DOWNLOAD_COMPLETE，只听广播等于失败即静默；
+     * PENDING/RUNNING/PAUSED（含等网络）由系统自行推进，继续等。
+     */
+    static int classifyDownloadStatus(int status) {
+        if (status == DownloadManager.STATUS_SUCCESSFUL) {
+            return POLL_INSTALL;
+        }
+        if (status == DownloadManager.STATUS_FAILED) {
+            return POLL_FAIL;
+        }
+        return POLL_KEEP_WAITING;
+    }
+
     /* HTTP 客户端收编决策：与 GeocoderHelper（Task 5）同构——助手各自持有 OkHttpClient，
        原 MainActivity.mOkHttpClient 的两处使用（REST 逆地理 / 更新检测）分别收编，
        MainActivity 字段随之删除；不共享实例以保持各助手自洽 */
@@ -175,6 +199,26 @@ public class UpdateManager {
     // 检测请求在 OkHttp 线程池里跑，回包时宿主 Activity 可能早已销毁：继续弹窗会抛 BadTokenException
     private Call mPendingCall;
     private boolean mDestroyed = false;
+
+    /* 下载阶段轮询：DownloadManager 失败只改自家数据库和通知，不给应用发广播，
+       不轮询就无法把失败告诉用户（现象即"下载中"之后再无下文） */
+    private static final long DOWNLOAD_POLL_INTERVAL_MS = 1000L;
+    private final Handler mDownloadPollHandler = new Handler(Looper.getMainLooper());
+    private boolean mDownloadActive = false;
+    // 轮询与完成广播互为兜底，可能先后触发安装：只放行先到的一个，避免叠两个安装页
+    private boolean mInstallStarted = false;
+    private final Runnable mDownloadPollTask = new Runnable() {
+        @Override
+        public void run() {
+            if (!mDownloadActive || mDestroyed) {
+                return;
+            }
+            pollDownloadStatus();
+            if (mDownloadActive && !mDestroyed) {
+                mDownloadPollHandler.postDelayed(this, DOWNLOAD_POLL_INTERVAL_MS);
+            }
+        }
+    };
 
     /**
      * 下载管理器获取与下载完成接收器注册（原 initUpdateVersion 原样迁入）。
@@ -206,6 +250,7 @@ public class UpdateManager {
      */
     public void destroy() {
         mDestroyed = true;
+        stopDownloadPolling();
         if (mPendingCall != null) {
             mPendingCall.cancel();
         }
@@ -353,15 +398,71 @@ public class UpdateManager {
         request.setDestinationUri(Uri.fromFile(file));
 
         mDownloadId = mDownloadManager.enqueue(request);
+        // 成功路径与完成广播互为冗余，失败路径由此主动收口；新一轮下载重置安装闸
+        mInstallStarted = false;
+        mDownloadActive = true;
+        mDownloadPollHandler.postDelayed(mDownloadPollTask, DOWNLOAD_POLL_INTERVAL_MS);
         GoUtils.DisplayToast(mActivity, mActivity.getResources().getString(R.string.update_downloading));
     }
 
+    private void stopDownloadPolling() {
+        mDownloadActive = false;
+        mDownloadPollHandler.removeCallbacks(mDownloadPollTask);
+    }
+
     /**
-     * 安装已下载的 APK（由下载完成接收器触发）。
+     * 查一次系统下载状态并按 {@link #classifyDownloadStatus(int)} 推进：
+     * 继续等（不动）/ 触发安装 / 失败收口。
+     */
+    private void pollDownloadStatus() {
+        Cursor cursor = mDownloadManager.query(new DownloadManager.Query().setFilterById(mDownloadId));
+        if (cursor == null) {
+            return; // 管理器查询异常：留待下一轮再查
+        }
+        try {
+            if (!cursor.moveToFirst()) {
+                // 记录没了（如在系统下载管理里被清）：永远等不到完成，按失败收口
+                reportDownloadFailure("download record missing");
+                return;
+            }
+            int status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+            int action = classifyDownloadStatus(status);
+            if (action == POLL_INSTALL) {
+                stopDownloadPolling();
+                install();
+            } else if (action == POLL_FAIL) {
+                int reason = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON));
+                reportDownloadFailure("status " + status + ", reason " + reason);
+            }
+        } finally {
+            cursor.close();
+        }
+    }
+
+    /**
+     * 下载失败统一收口：停轮询、删掉下载记录与半截文件（DownloadManager 不覆盖同名文件，
+     * 残留会挡住重下）、提示用户。错误码只进日志，不拿数字打扰用户。
+     */
+    private void reportDownloadFailure(String reason) {
+        stopDownloadPolling();
+        XLog.e("UPDATE: 新版本下载失败 " + reason);
+        mDownloadManager.remove(mDownloadId);
+        if (!mDestroyed) {
+            GoUtils.DisplayToast(mActivity, mActivity.getResources().getString(R.string.update_download_failed));
+        }
+    }
+
+    /**
+     * 安装已下载的 APK（由下载完成接收器或状态轮询触发，mInstallStarted 保证只放行先到的一个）。
      * 拉起系统安装界面前先过 {@link #isSelfUpgradeApk(File)}：远端 JSON 与文件名都不足以证明
      * "这个包是升级本应用"，校验不通过直接放弃，不让用户走到安装页再被签名/包名报错劝退。
      */
     public void install() {
+        if (mInstallStarted) {
+            return;
+        }
+        mInstallStarted = true;
+
         File file = new File(mActivity.getExternalFilesDir("Updates"), mUpdateFilename);
         if (!isSelfUpgradeApk(file)) {
             GoUtils.DisplayToast(mActivity, mActivity.getResources().getString(R.string.update_verify_failed));

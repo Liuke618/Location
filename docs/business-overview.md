@@ -125,9 +125,9 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 - **检测**:GET `api.github.com/repos/{UPDATE_REPO_SLUG}/releases/latest`(仓库由构建注入 BuildConfig)。两个入口:启动**自动检测**(失败静默,只记日志)、侧边栏**手动检测**(失败/已是最新均有 Toast)。
 - **判定**:语义化版本比较(tag_name vs 当前 versionName,容忍 v 前缀、段数不等、`-rc`/`+build` 后缀)且 **下载地址同源校验**(https + github.com + 同仓库路径)双通过才弹窗——防降级误报与伪造下载地址。
 - **弹窗**:自定义 update 布局,Markwon 渲染 Markdown release 说明;忽略 / 更新。
-- **下载**:系统 DownloadManager(通知可见),存 `Updates/` 目录,入队前删除同名旧文件(删不掉则取消),入队成功才提示"下载中";完成接收器(NOT_EXPORTED)**比对 downloadId** 防无关下载误触发。
-- **安装前自检**(`isSelfUpgradeApk`):APK 可解析、包名与本应用一致、versionCode 更高,三者缺一拒绝安装;通过后经 FileProvider URI 拉起系统安装器,拿不到 Uri 则跳"未知来源"设置页。需要 `REQUEST_INSTALL_PACKAGES` 权限。
-- **健壮性**:检测请求在 OkHttp 线程回包时宿主可能已销毁——`mDestroyed` 门控 + `destroy()` 取消在途请求,避免 BadTokenException;HTTP 非 200(如 GitHub 限流 403/429)直接按失败收口,不把错误页喂给 JSON 解析。
+- **下载**:系统 DownloadManager(通知可见),存 `Updates/` 目录,入队前删除同名旧文件(删不掉则取消),入队成功才提示"下载中";完成接收器(NOT_EXPORTED)**比对 downloadId** 防无关下载误触发。入队后另起**状态轮询**(主线程 Handler,1s 一次查 DownloadManager):成功触发安装、失败 toast 报错并删下载记录(半截文件防残留挡重下)、记录消失按失败收口——DownloadManager 失败**不发完成广播**,只听广播等于失败即静默。
+- **安装前自检**(`isSelfUpgradeApk`):APK 可解析、包名与本应用一致、versionCode 更高,三者缺一拒绝安装;通过后经 FileProvider URI 拉起系统安装器,拿不到 Uri 则跳"未知来源"设置页。需要 `REQUEST_INSTALL_PACKAGES` 权限。轮询与完成广播互为兜底,`mInstallStarted` 保证只放行先到的一个。
+- **健壮性**:检测请求在 OkHttp 线程回包时宿主可能已销毁——`mDestroyed` 门控 + `destroy()` 取消在途请求,避免 BadTokenException;HTTP 非 200(如 GitHub 限流 403/429)直接按失败收口,不把错误页喂给 JSON 解析;`destroy()` 同时停掉下载轮询,轮询失败提示也受 `mDestroyed` 门控。
 
 ## 11. 设置
 
