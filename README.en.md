@@ -4,7 +4,7 @@
 
 <div align="center">
 
-### YingSuo (GoGoGo)
+### 任意门 (GoGoGo)
 
 A mock location APP without ROOT for Android 12+.
 
@@ -14,7 +14,7 @@ A mock location APP without ROOT for Android 12+.
 
 ## Introduction
 
-&emsp;&emsp;YingSuo is a fork of [ZCShou/GoGoGo](https://github.com/ZCShou/GoGoGo), a mock location tool for Android built on the debug API (TestProvider) plus the AMap LBS SDK: pick a spot on the map (via search, tap, long-press, or manual coordinates) and teleport the system location there with one tap — no root required. Static teleport only; no route simulation.
+&emsp;&emsp;任意门 ("Anywhere Door") is a fork of [ZCShou/GoGoGo](https://github.com/ZCShou/GoGoGo), a mock location tool for Android built on the debug API (TestProvider) plus the AMap LBS SDK: pick a spot on the map (via search, tap, long-press, or manual coordinates) and teleport the system location there with one tap — no root required. Static teleport only; no route simulation.
 
 &emsp;&emsp;By default the app **never reads your real location** — targets come from search, map picking, or manual input only. A "locate myself" switch in Settings can turn on the real-location blue dot when needed.
 
