@@ -83,3 +83,11 @@ Toolchain: JDK 17 + Android SDK (AGP 9.x / targetSdk 36, single pure-Java `:app`
 ## License
 
 [GPL-3.0-only](./LICENSE) © ZCShou. This fork remains GPL-3.0.
+
+## Buy Me a Coffee
+
+If this project helps you, feel free to buy me a coffee ☕
+
+| WeChat | Alipay |
+|:---:|:---:|
+| <img src="./docs/images/donate-wechat.png" width="240"/> | <img src="./docs/images/donate-alipay.png" width="240"/> |

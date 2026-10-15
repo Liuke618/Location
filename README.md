@@ -83,3 +83,11 @@
 ## 许可证
 
 [GPL-3.0-only](./LICENSE) © ZCShou,本分支沿用 GPL-3.0 开源。
+
+## 请作者喝杯咖啡
+
+如果这个项目对你有帮助,欢迎请作者喝一杯 ☕
+
+| 微信 | 支付宝 |
+|:---:|:---:|
+| <img src="./docs/images/donate-wechat.png" width="240"/> | <img src="./docs/images/donate-alipay.png" width="240"/> |
