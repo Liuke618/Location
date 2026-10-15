@@ -18,6 +18,14 @@
 
 &emsp;&emsp;默认**不读取真实位置**——选点只来自搜索/地图选点/手动输入;如需真实位置蓝点辅助,可在设置中开启"定位自己的位置"。
 
+## 应用截图
+
+| ![主界面地图选点](./docs/images/screenshot-map.jpg) | ![抽屉菜单](./docs/images/screenshot-drawer.jpg) | ![WIFI 提示](./docs/images/screenshot-wifi-warning.jpg) |
+|:---:|:---:|:---:|
+| 主界面:地图选点,一键 GO | 抽屉菜单 | 开始模拟前的 WIFI 提示 |
+
+*以上为真机截图。*
+
 ## 功能
 
 1. **地图选点模拟定位**:单击/长按地图选点,或手动输入经纬度(支持 GCJ02/WGS84),一键 GO 瞬移;模拟中可随时传送到新选点

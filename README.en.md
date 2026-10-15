@@ -18,6 +18,14 @@ A mock location APP without ROOT for Android 12+.
 
 &emsp;&emsp;By default the app **never reads your real location** — targets come from search, map picking, or manual input only. A "locate myself" switch in Settings can turn on the real-location blue dot when needed.
 
+## Screenshots
+
+| ![Main map screen](./docs/images/screenshot-map.jpg) | ![Navigation drawer](./docs/images/screenshot-drawer.jpg) | ![Wi-Fi reminder](./docs/images/screenshot-wifi-warning.jpg) |
+|:---:|:---:|:---:|
+| Main screen: pick a spot, one-tap GO | Navigation drawer | Wi-Fi reminder before mocking |
+
+*Real-device screenshots.*
+
 ## Features
 
 1. **Map-based mock location**: tap / long-press the map or enter coordinates (GCJ02 / WGS84), one-tap GO; teleport to new spots while mocking
