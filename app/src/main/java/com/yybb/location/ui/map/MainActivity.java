@@ -472,7 +472,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                     ShareUtils.shareFile(this, logFile, item.getTitle().toString());
                 }
             } else if (id == R.id.nav_contact) {
-                Uri uri = Uri.parse("https://gitee.com/itexp/gogogo/issues");
+                Uri uri = Uri.parse("https://github.com/Liuke618/Location/issues");
                 Intent intent = new Intent(Intent.ACTION_VIEW, uri);
                 startActivity(intent);
             } else if (id == R.id.nav_donate) {
