@@ -4,7 +4,7 @@
 
 <div align="center">
 
-### 任意门 (GoGoGo)
+### 任意门
 
 A mock location APP without ROOT for Android 12+.
 
