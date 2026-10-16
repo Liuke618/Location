@@ -62,14 +62,22 @@ jobs:
           import os
           import shutil
           import subprocess
+          import urllib.error
           import urllib.parse
           import urllib.request
+
+
+          def fail(msg):
+              # 以 ::error:: 输出,成为 check annotation,便于无日志权限时排障
+              print('::error::' + msg.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+
 
           gh_token = os.environ['GH_TOKEN']
           ge_token = os.environ['GITEE_TOKEN']
           gitee_api = 'https://gitee.com/api/v5/repos/Co2O2/location'
           tmpdir = '/tmp/assets'
           os.makedirs(tmpdir, exist_ok=True)
+
 
           def gh_fetch(url, accept='application/json'):
               req = urllib.request.Request(url, headers={
@@ -78,13 +86,19 @@ jobs:
               })
               return urllib.request.urlopen(req, timeout=120)
 
+
+          def gitee_post(path, fields):
+              data = urllib.parse.urlencode(fields).encode()
+              req = urllib.request.Request(gitee_api + path, data=data)
+              return urllib.request.urlopen(req, timeout=60)
+
+
           with gh_fetch('https://api.github.com/repos/'
                         + os.environ['GITHUB_REPOSITORY']
                         + '/releases?per_page=30') as r:
               gh_releases = json.load(r)
-          req = urllib.request.Request(gitee_api + '/releases?access_token='
-                                       + ge_token + '&per_page=100')
-          with urllib.request.urlopen(req, timeout=60) as r:
+          with urllib.request.urlopen(gitee_api + '/releases?access_token='
+                                      + ge_token + '&per_page=100', timeout=60) as r:
               gitee_ids = {rel['tag_name']: rel['id'] for rel in json.load(r)}
 
           failed = []
@@ -92,20 +106,30 @@ jobs:
               if rel['draft'] or rel['tag_name'] in gitee_ids:
                   continue
               tag = rel['tag_name']
-              form = urllib.parse.urlencode({
-                  'access_token': ge_token,
-                  'tag_name': tag,
-                  'name': rel['name'] or tag,
-                  'body': rel['body'] or '',
-                  'prerelease': 'true' if rel['prerelease'] else 'false',
-              }).encode()
-              req = urllib.request.Request(gitee_api + '/releases', data=form)
+              # 先显式建 tag(指向 master;已存在等失败不阻塞,由建 release 暴露真实报错)
               try:
-                  with urllib.request.urlopen(req, timeout=60) as r:
+                  gitee_post('/tags', {'access_token': ge_token, 'tag_name': tag,
+                                       'ref': 'master'}).read()
+                  print(tag + ': 已创建 Gitee tag(指向 master)')
+              except Exception as e:
+                  print(tag + ': 建 tag 跳过: ' + repr(e))
+              try:
+                  with gitee_post('/releases', {
+                      'access_token': ge_token,
+                      'tag_name': tag,
+                      'name': rel['name'] or tag,
+                      'body': rel['body'] or '',
+                      'prerelease': 'true' if rel['prerelease'] else 'false',
+                  }) as r:
                       rid = json.load(r)['id']
                   print(tag + ': 已创建 Gitee release id=' + str(rid))
+              except urllib.error.HTTPError as e:
+                  fail('create ' + tag + ' HTTP ' + str(e.code) + ': '
+                       + e.read().decode('utf-8', 'replace')[:500])
+                  failed.append(tag)
+                  continue
               except Exception as e:
-                  print(tag + ': 创建失败 ' + repr(e))
+                  fail('create ' + tag + ': ' + repr(e))
                   failed.append(tag)
                   continue
               for asset in rel['assets']:
@@ -120,10 +144,11 @@ jobs:
                       '-F', 'file=@' + dest,
                   ], capture_output=True, text=True)
                   if up.returncode != 0:
-                      print(tag + ': 附件 ' + asset['name'] + ' 上传失败 ' + up.stderr)
+                      fail('upload ' + asset['name'] + ' for ' + tag + ': '
+                           + (up.stderr or up.stdout or 'curl 失败')[:500])
                       failed.append(tag)
                   else:
-                      print(tag + ': 附件已上传 ' + asset['name'])
+                      print(tag + ': 附件已上传 ' + asset['name'] + ' (' + dest + ')')
           if failed:
               raise SystemExit('同步失败的 release: ' + ', '.join(sorted(set(failed))))
           print('release 同步完成')
