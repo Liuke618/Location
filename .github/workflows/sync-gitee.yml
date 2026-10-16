@@ -20,7 +20,7 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
 
@@ -99,47 +99,58 @@ jobs:
               gh_releases = json.load(r)
           with urllib.request.urlopen(gitee_api + '/releases?access_token='
                                       + ge_token + '&per_page=100', timeout=60) as r:
-              gitee_ids = {rel['tag_name']: rel['id'] for rel in json.load(r)}
+              gitee_rels = {rel['tag_name']: rel for rel in json.load(r)}
 
           failed = []
           for rel in gh_releases:
-              if rel['draft'] or rel['tag_name'] in gitee_ids:
+              if rel['draft']:
                   continue
               tag = rel['tag_name']
-              # 先显式建 tag(指向 master;已存在等失败不阻塞,由建 release 暴露真实报错)
-              try:
-                  gitee_post('/tags', {'access_token': ge_token, 'tag_name': tag,
-                                       'ref': 'master'}).read()
-                  print(tag + ': 已创建 Gitee tag(指向 master)')
-              except Exception as e:
-                  print(tag + ': 建 tag 跳过: ' + repr(e))
-              try:
-                  with gitee_post('/releases', {
-                      'access_token': ge_token,
-                      'tag_name': tag,
-                      'name': rel['name'] or tag,
-                      'body': rel['body'] or '',
-                      'prerelease': 'true' if rel['prerelease'] else 'false',
-                      'target_commitish': 'master',
-                  }) as r:
-                      rid = json.load(r)['id']
-                  print(tag + ': 已创建 Gitee release id=' + str(rid))
-              except urllib.error.HTTPError as e:
-                  fail('create ' + tag + ' HTTP ' + str(e.code) + ': '
-                       + e.read().decode('utf-8', 'replace')[:500])
-                  failed.append(tag)
-                  continue
-              except Exception as e:
-                  fail('create ' + tag + ': ' + repr(e))
-                  failed.append(tag)
-                  continue
+              ge = gitee_rels.get(tag)
+              if ge is None:
+                  # 先显式建 tag(指向 master;已存在等失败不阻塞,由建 release 暴露真实报错)
+                  try:
+                      gitee_post('/tags', {'access_token': ge_token, 'tag_name': tag,
+                                           'ref': 'master'}).read()
+                      print(tag + ': 已创建 Gitee tag(指向 master)')
+                  except Exception as e:
+                      print(tag + ': 建 tag 跳过: ' + repr(e))
+                  try:
+                      with gitee_post('/releases', {
+                          'access_token': ge_token,
+                          'tag_name': tag,
+                          'name': rel['name'] or tag,
+                          'body': rel['body'] or '',
+                          'prerelease': 'true' if rel['prerelease'] else 'false',
+                          'target_commitish': 'master',
+                      }) as r:
+                          rid = json.load(r)['id']
+                      print(tag + ': 已创建 Gitee release id=' + str(rid))
+                  except urllib.error.HTTPError as e:
+                      fail('create ' + tag + ' HTTP ' + str(e.code) + ': '
+                           + e.read().decode('utf-8', 'replace')[:500])
+                      failed.append(tag)
+                      continue
+                  except Exception as e:
+                      fail('create ' + tag + ': ' + repr(e))
+                      failed.append(tag)
+                      continue
+              else:
+                  # release 已存在(可能上次超时没传完附件):只补缺的附件
+                  rid = ge['id']
+              have = {a['name'] for a in ge['assets'] if ge and a.get('name')}
               for asset in rel['assets']:
+                  if asset['name'] in have:
+                      print(tag + ': 附件已存在,跳过 ' + asset['name'])
+                      continue
                   dest = os.path.join(tmpdir, asset['name'])
                   with gh_fetch(asset['url'], accept='application/octet-stream') as src, \
                           open(dest, 'wb') as out:
                       shutil.copyfileobj(src, out)
                   up = subprocess.run([
-                      'curl', '-sfS', '-X', 'POST',
+                      'curl', '-sfS', '--connect-timeout', '20',
+                      '--max-time', '1200', '--retry', '2', '--retry-delay', '5',
+                      '-X', 'POST',
                       gitee_api + '/releases/' + str(rid)
                       + '/attach_files?access_token=' + ge_token,
                       '-F', 'file=@' + dest,
