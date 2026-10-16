@@ -120,6 +120,7 @@ jobs:
                       'name': rel['name'] or tag,
                       'body': rel['body'] or '',
                       'prerelease': 'true' if rel['prerelease'] else 'false',
+                      'target_commitish': 'master',
                   }) as r:
                       rid = json.load(r)['id']
                   print(tag + ': 已创建 Gitee release id=' + str(rid))
