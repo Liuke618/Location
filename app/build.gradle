@@ -2,16 +2,14 @@ plugins {
     id "com.android.application"
 }
 
-// 从 local.properties 读取高德地图密钥并注入 manifestPlaceholder(键名与 CI 注入方式保持不变)
+// 从 local.properties 读取高德地图密钥并注入 manifestPlaceholder(键名与 CI 注入方式保持不变);
+// 键值允许为空:高德 key 已支持用户在应用设置页自配,内置 key 非必需,不因空值打印告警
 def localProps = new Properties()
 def localPropsFile = rootProject.file('local.properties')
 if (localPropsFile.exists()) {
     localPropsFile.withInputStream { localProps.load(it) }
 }
 def amapApiKey = localProps.getProperty('AMAP_API_KEY', '')
-if (amapApiKey.isEmpty()) {
-    logger.warn('AMAP_API_KEY 未在 local.properties 中配置,高德地图运行时将无法初始化')
-}
 
 // 应用内更新的 release 来源(owner/repo)。刻意不再硬编码上游仓库:上游 APK 与本应用包名不同,
 // 装上的是另一个应用而非升级。默认指本 fork,可经 local.properties 或 CI 注入 UPDATE_REPO_SLUG 覆盖
