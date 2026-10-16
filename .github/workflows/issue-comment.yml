@@ -70,7 +70,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ github.event.issue.number }}
           body: |
-            Hello @${{ github.event.issue.user.login }}, Thanks for your using GoGoGo. It is recommended that you first check whether the corresponding document can solve your feedback.
+            Hello @${{ github.event.issue.user.login }}, Thanks for your using 任意门. It is recommended that you first check whether the corresponding document can solve your feedback.
 
             你好 @${{ github.event.issue.user.login }}，感谢您使用任意门，建议您首先查看对应的文档是否可以解决您的反馈。
 
