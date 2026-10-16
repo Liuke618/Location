@@ -165,6 +165,34 @@ public class UpdateManagerTest {
     }
 
     @Test
+    public void isUpdateIgnored_sameOrOlderThanIgnored_isTrue() {
+        // 忽略 v1.2.3 后：同版不再弹；远端撤包回退到更旧版本同样不打扰
+        assertTrue(UpdateManager.isUpdateIgnored("v1.2.3", "v1.2.3"));
+        assertTrue(UpdateManager.isUpdateIgnored("v1.2.2", "v1.2.3"));
+        assertTrue(UpdateManager.isUpdateIgnored("1.2.3", "v1.2.3"));
+    }
+
+    @Test
+    public void isUpdateIgnored_newerThanIgnored_isFalse() {
+        // 出现更高版本视为新更新，恢复自动提醒
+        assertFalse(UpdateManager.isUpdateIgnored("v1.2.4", "v1.2.3"));
+        assertFalse(UpdateManager.isUpdateIgnored("v1.3.0", "v1.2.9"));
+    }
+
+    @Test
+    public void isUpdateIgnored_noIgnoreRecord_isFalse() {
+        // 从未忽略过：任何版本都照常提醒
+        assertFalse(UpdateManager.isUpdateIgnored("v1.2.3", null));
+        assertFalse(UpdateManager.isUpdateIgnored("v1.2.3", ""));
+    }
+
+    @Test
+    public void isUpdateIgnored_malformedIgnoredRecord_isFalse() {
+        // 存值损坏按未忽略处理，宁可多弹不可漏弹
+        assertFalse(UpdateManager.isUpdateIgnored("v1.2.3", "任意门最新版"));
+    }
+
+    @Test
     public void isTrustedDownloadUrl_sameRepoHttps_isAccepted() {
         assertTrue(UpdateManager.isTrustedDownloadUrl(
                 "https://github.com/Liuke618/Location/releases/download/v1.2.3/app.apk", SELF_SLUG));

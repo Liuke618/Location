@@ -231,7 +231,11 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         mUpdateManager = new UpdateManager();
         mUpdateManager.init(this);
 
-        mUpdateManager.checkUpdate(false);
+        //自动检查更新(默认开,设置页「关于」分组可关):关闭时启动不发起检测;
+        //侧边栏"检查更新"是用户主动行为,始终可用
+        if (sharedPreferences.getBoolean(UpdateManager.PREF_KEY_AUTO_CHECK_UPDATE, true)) {
+            mUpdateManager.checkUpdate(false);
+        }
 
         //高德 Key 缺失引导:生效 key(设置自定义→清单内置)为空时地图空白/搜索报错,构建不拦,只能入口处提示
         maybePromptAmapKey();

@@ -21,6 +21,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.preference.PreferenceManager;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -52,12 +53,19 @@ import io.noties.markwon.Markwon;
  * GitHub releases/latest 检测（OkHttp GET + runOnUiThread）、更新对话框组装
  * （R.layout.update + Markwon，与流程紧耦合，原样随迁，不再拆分）、
  * DownloadManager 下载与下载完成接收器、APK 安装前自检与安装跳转。
+ * 自动检测受两道门控：「自动检查更新」开关（MainActivity 启动处）与已忽略版本
+ * （「忽略该版本」按钮写入，同版及更旧版本不再打扰）；手动检测（侧边栏）均不受限。
  */
 public class UpdateManager {
 
     /* release 来源仓库由构建注入(BuildConfig.UPDATE_REPO_SLUG),不再硬编码某个固定仓库 */
     private static final String RELEASE_API_URL =
             "https://api.github.com/repos/" + BuildConfig.UPDATE_REPO_SLUG + "/releases/latest";
+
+    /* 偏好键(默认 SharedPreferences,与设置项同库):开关由设置页「关于」分组读写、
+       MainActivity 启动门控读取;忽略版本由更新对话框「忽略该版本」按钮写入 */
+    public static final String PREF_KEY_AUTO_CHECK_UPDATE = "setting_auto_check_update";
+    public static final String PREF_KEY_IGNORED_UPDATE_VERSION = "setting_ignored_update_version";
 
     /**
      * 更新信息值对象：原对话框组装内逐键 getString 读取结果的收编载体。
@@ -139,6 +147,16 @@ public class UpdateManager {
             }
         }
         return segments;
+    }
+
+    /**
+     * 纯函数：检测到的更新是否已被用户忽略（自动检测可静默跳过）。
+     * 忽略语义按版本号比较而非字符串全等：忽略 v1.2.3 后，远端撤包回退到更旧版本
+     * 同样不再提醒；出现更高版本视为新更新，恢复自动提醒。未忽略过任何版本时恒为 false。
+     */
+    static boolean isUpdateIgnored(String latestTag, String ignoredVersion) {
+        return ignoredVersion != null && !ignoredVersion.isEmpty()
+                && compareVersionNames(latestTag, ignoredVersion) <= 0;
     }
 
     /**
@@ -260,6 +278,7 @@ public class UpdateManager {
     /**
      * 发起更新检测（原 checkUpdateVersion 迁入：GitHub releases/latest HTTP + runOnUiThread
      * + 对话框组装；版本判断改为语义化比较，并新增下载地址同源校验）。
+     * 自动检测遇已忽略版本静默跳过；手动检测是用户主动行为，照常弹窗。
      *
      * @param manualToast 手动检测（侧边栏"检查更新"）时，已是最新版给出提示
      */
@@ -303,8 +322,11 @@ public class UpdateManager {
 
                         boolean isNewer = compareVersionNames(info.tagName, curVersion) > 0;
                         boolean sameSource = isTrustedDownloadUrl(info.downloadUrl, BuildConfig.UPDATE_REPO_SLUG);
+                        //忽略门控只作用于自动检测:自动弹窗不打扰已明确拒绝过的版本
+                        boolean ignored = !manualToast
+                                && isUpdateIgnored(info.tagName, readIgnoredUpdateVersion());
 
-                        if (isNewer && sameSource) {
+                        if (isNewer && sameSource && !ignored) {
                             final android.app.AlertDialog alertDialog = new android.app.AlertDialog.Builder(mActivity).create();
                             alertDialog.show();
                             alertDialog.setCancelable(false);
@@ -327,7 +349,11 @@ public class UpdateManager {
                                 markwon.setMarkdown(updateContent, info.body);
 
                                 Button updateCancel = window.findViewById(R.id.update_ignore);
-                                updateCancel.setOnClickListener(v -> alertDialog.cancel());
+                                //「忽略该版本」:记下当前 release,自动检测不再提醒同版及更旧版本
+                                updateCancel.setOnClickListener(v -> {
+                                    persistIgnoredUpdateVersion(info.tagName);
+                                    alertDialog.cancel();
+                                });
 
                                 /* 这里用来保存下载地址 */
                                 mUpdateFilename = info.filename;
@@ -349,6 +375,21 @@ public class UpdateManager {
                 });
             }
         });
+    }
+
+    /**
+     * 已忽略版本的存取:挂在默认 SharedPreferences(与设置项同库),读写均在主线程决策点。
+     */
+    private String readIgnoredUpdateVersion() {
+        return PreferenceManager.getDefaultSharedPreferences(mActivity)
+                .getString(PREF_KEY_IGNORED_UPDATE_VERSION, null);
+    }
+
+    private void persistIgnoredUpdateVersion(String tagName) {
+        PreferenceManager.getDefaultSharedPreferences(mActivity)
+                .edit()
+                .putString(PREF_KEY_IGNORED_UPDATE_VERSION, tagName)
+                .apply();
     }
 
     /**

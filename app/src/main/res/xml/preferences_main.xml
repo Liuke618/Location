@@ -91,6 +91,13 @@
         app:title="@string/setting_group_about"
         app:iconSpaceReserved="false">
 
+        <SwitchPreferenceCompat
+            app:key="setting_auto_check_update"
+            app:title="@string/setting_auto_check_update"
+            app:summary="@string/setting_auto_check_update_summary"
+            app:defaultValue="true"
+            app:iconSpaceReserved="false"/>
+
         <Preference
             app:key="setting_version"
             app:title="@string/setting_version"

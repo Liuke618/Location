@@ -112,6 +112,8 @@
     <string name="setting_group_about">关于</string>
     <string name="setting_version">版本号</string>
     <string name="setting_author">开发者</string>
+    <string name="setting_auto_check_update">自动检查更新</string>
+    <string name="setting_auto_check_update_summary">启动时检测新版本并弹窗提醒，关闭后仍可在侧边栏手动检查</string>
 
     <!-- 历史记录页面 -->
     <string name="history_expiration">7</string>
@@ -182,7 +184,7 @@
     <string name="update_last">恭喜，任意门已是最新版</string>
     <string name="update_check_failed">检查更新失败，请稍后重试</string>
     <string name="update_download">立即下载</string>
-    <string name="update_ignore">忽略一次</string>
+    <string name="update_ignore">忽略该版本</string>
     <string name="update_time">更新时间：</string>
     <string name="update_commit">提交信息：</string>
 </resources>
