@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # 文档镜像:从完整检出中仅复制 README 与其引用的图片,组独立提交推送,
       # 保证 Gitee 收不到代码与历史
