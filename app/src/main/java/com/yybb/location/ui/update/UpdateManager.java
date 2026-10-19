@@ -53,8 +53,10 @@ import io.noties.markwon.Markwon;
  * GitHub releases/latest 检测（OkHttp GET + runOnUiThread）、更新对话框组装
  * （R.layout.update + Markwon，与流程紧耦合，原样随迁，不再拆分）、
  * DownloadManager 下载与下载完成接收器、APK 安装前自检与安装跳转。
- * 自动检测受两道门控：「自动检查更新」开关（MainActivity 启动处）与已忽略版本
- * （「忽略该版本」按钮写入，同版及更旧版本不再打扰）；手动检测（侧边栏）均不受限。
+ * 自动检测受多道门控：「自动检查更新」开关（MainActivity 启动处）、已忽略版本
+ * （「忽略该版本」按钮写入，同版及更旧版本不再打扰）与 24 小时节流（距上次收到
+ * 服务端响应不足一天则跳过）；手动检测（侧边栏）不受节流与忽略限制。
+ * 同一时刻只保留一个在途检测请求：新请求取消旧请求，自动/手动叠加或连点不叠窗。
  */
 public class UpdateManager {
 
@@ -62,10 +64,16 @@ public class UpdateManager {
     private static final String RELEASE_API_URL =
             "https://api.github.com/repos/" + BuildConfig.UPDATE_REPO_SLUG + "/releases/latest";
 
+    /* 自动检测最小间隔(24 小时,以"上次收到服务端响应"为记账点);手动检测不受此限 */
+    static final long AUTO_CHECK_MIN_INTERVAL_MS = TimeUnit.HOURS.toMillis(24);
+
     /* 偏好键(默认 SharedPreferences,与设置项同库):开关由设置页「关于」分组读写、
        MainActivity 启动门控读取;忽略版本由更新对话框「忽略该版本」按钮写入 */
     public static final String PREF_KEY_AUTO_CHECK_UPDATE = "setting_auto_check_update";
     public static final String PREF_KEY_IGNORED_UPDATE_VERSION = "setting_ignored_update_version";
+
+    /* 上次自动检测"收到服务端响应"的毫秒时间戳(内部记账键,无设置页入口) */
+    private static final String PREF_KEY_LAST_AUTO_CHECK_TIME = "setting_last_auto_check_update_time";
 
     /**
      * 更新信息值对象：原对话框组装内逐键 getString 读取结果的收编载体。
@@ -157,6 +165,17 @@ public class UpdateManager {
     static boolean isUpdateIgnored(String latestTag, String ignoredVersion) {
         return ignoredVersion != null && !ignoredVersion.isEmpty()
                 && compareVersionNames(latestTag, ignoredVersion) <= 0;
+    }
+
+    /**
+     * 纯函数：自动检测是否已到最小间隔（以「上次收到服务端响应」为记账点）。
+     * 从未记账(0/负)视为到期；时钟回拨导致的负差按未到期处理，不因此重复打扰服务端。
+     */
+    static boolean isAutoCheckDue(long nowMs, long lastAutoCheckMs) {
+        if (lastAutoCheckMs <= 0L) {
+            return true;
+        }
+        return nowMs - lastAutoCheckMs >= AUTO_CHECK_MIN_INTERVAL_MS;
     }
 
     /**
@@ -283,6 +302,18 @@ public class UpdateManager {
      * @param manualToast 手动检测（侧边栏"检查更新"）时，已是最新版给出提示
      */
     public void checkUpdate(boolean manualToast) {
+        // 自动检测节流:距上次收到服务端响应不足 24 小时则跳过(手动检测是用户主动行为,不受此限)
+        if (!manualToast && !isAutoCheckDue(System.currentTimeMillis(), readLastAutoCheckTime())) {
+            XLog.d("UPDATE: 自动检测距上次检测不足 24 小时, 跳过");
+            return;
+        }
+
+        // 防重入:自动/手动叠加或连点"检查更新"时取消在途请求,只保留最后一次请求的语义,避免并发回包叠窗
+        if (mPendingCall != null) {
+            mPendingCall.cancel();
+            mPendingCall = null;
+        }
+
         okhttp3.Request request = new okhttp3.Request.Builder().url(RELEASE_API_URL).get().build();
         final Call call = mOkHttpClient.newCall(request);
         mPendingCall = call;
@@ -298,12 +329,21 @@ public class UpdateManager {
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull okhttp3.Response response) throws IOException {
+                if (call.isCanceled()) {
+                    // 已被新检测取代:结果整体作废,不记账不弹窗(取消与已到回包之间存在竞态窗口)
+                    response.close();
+                    return;
+                }
                 ResponseBody responseBody = response.body();
                 if (responseBody == null) {
                     reportCheckFailure("empty body", manualToast);
                     return;
                 }
                 String resp = responseBody.string();
+                if (!manualToast) {
+                    // 以"收到服务端响应"记账(含 403/429 等 HTTP 错误):离线无响应不记账,下次启动立即重试
+                    persistLastAutoCheckTime();
+                }
                 if (!response.isSuccessful()) {
                     // 403/429 多为 GitHub 未认证 API 限流，响应体不是 release JSON；
                     // 原先把这段文本直接丢给 JSON 解析，失败后只留一行日志，用户看不出区别
@@ -389,6 +429,20 @@ public class UpdateManager {
         PreferenceManager.getDefaultSharedPreferences(mActivity)
                 .edit()
                 .putString(PREF_KEY_IGNORED_UPDATE_VERSION, tagName)
+                .apply();
+    }
+
+    /** 自动检测记账读取:挂在默认 SharedPreferences(与设置项同库),读在主线程决策点 */
+    private long readLastAutoCheckTime() {
+        return PreferenceManager.getDefaultSharedPreferences(mActivity)
+                .getLong(PREF_KEY_LAST_AUTO_CHECK_TIME, 0L);
+    }
+
+    /** 自动检测记账写入:OkHttp 回调线程调用,SharedPreferences 读写线程安全,apply 异步落盘 */
+    private void persistLastAutoCheckTime() {
+        PreferenceManager.getDefaultSharedPreferences(mActivity)
+                .edit()
+                .putLong(PREF_KEY_LAST_AUTO_CHECK_TIME, System.currentTimeMillis())
                 .apply();
     }
 

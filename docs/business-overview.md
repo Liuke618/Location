@@ -122,7 +122,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 
 **组件**:`UpdateManager`(随 MainActivity 创建,`onDestroy` 注销)。
 
-- **检测**:GET `api.github.com/repos/{UPDATE_REPO_SLUG}/releases/latest`(仓库由构建注入 BuildConfig)。两个入口:启动**自动检测**(失败静默,只记日志;受设置「自动检查更新」开关门控,默认开)、侧边栏**手动检测**(失败/已是最新均有 Toast,**不受开关与忽略影响**)。
+- **检测**:GET `api.github.com/repos/{UPDATE_REPO_SLUG}/releases/latest`(仓库由构建注入 BuildConfig)。两个入口:启动**自动检测**(失败静默,只记日志;受设置「自动检查更新」开关门控,默认开)、侧边栏**手动检测**(失败/已是最新均有 Toast,**不受开关与忽略影响**)。自动检测另受 24 小时节流(记账点=自动检测收到服务端响应,含 403/429 等 HTTP 错误;离线无响应不记账、下次启动立即重试;手动检测不参与记账)与同刻单请求约束(新检测取消在途请求,自动/手动叠加或连点不叠窗;手动检测不受节流限制)。
 - **判定**:语义化版本比较(tag_name vs 当前 versionName,容忍 v 前缀、段数不等、`-rc`/`+build` 后缀)且 **下载地址同源校验**(https + github.com + 同仓库路径)双通过才弹窗——防降级误报与伪造下载地址。自动检测另有**忽略门控**:「忽略该版本」把 release tag_name 存偏好 `setting_ignored_update_version`,latest ≤ 已忽略版本(版本号比较)即静默跳过,更高版本恢复提醒;手动检测照常弹窗。
 - **弹窗**:自定义 update 布局,Markwon 渲染 Markdown release 说明;忽略该版本 / 更新。
 - **下载**:系统 DownloadManager(通知可见),存 `Updates/` 目录,入队前删除同名旧文件(删不掉则取消),入队成功才提示"下载中";完成接收器(NOT_EXPORTED)**比对 downloadId** 防无关下载误触发。入队后另起**状态轮询**(主线程 Handler,1s 一次查 DownloadManager):成功触发安装、失败 toast 报错并删下载记录(半截文件防残留挡重下)、记录消失按失败收口——DownloadManager 失败**不发完成广播**,只听广播等于失败即静默。

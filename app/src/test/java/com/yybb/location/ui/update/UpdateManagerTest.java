@@ -12,7 +12,7 @@ import org.junit.Test;
 
 /**
  * UpdateManager 纯函数 JVM 单测（无 Android 依赖）：release 解析、版本比较、下载地址同源校验、
- * 下载状态判定。
+ * 下载状态判定、自动检测节流判定。
  * 语义锚定原 MainActivity.checkUpdateVersion 更新对话框组装的 JSON 读取（行为冻结）：
  * name/tag_name/created_at/target_commitish/body 直接 getString；assets 经 getString 后二次
  * new JSONArray 解析再取 assets[0] 的 browser_download_url/name；
@@ -242,5 +242,24 @@ public class UpdateManagerTest {
                 UpdateManager.classifyDownloadStatus(DownloadManager.STATUS_RUNNING));
         assertEquals(UpdateManager.POLL_KEEP_WAITING,
                 UpdateManager.classifyDownloadStatus(DownloadManager.STATUS_PAUSED));
+    }
+
+    @Test
+    public void isAutoCheckDue_neverCheckedOrBeyondInterval_isTrue() {
+        long now = 1_800_000_000_000L;
+        long day = UpdateManager.AUTO_CHECK_MIN_INTERVAL_MS;
+        // 从未记账(0)视为到期;距上次恰满/超过 24 小时视为到期
+        assertTrue(UpdateManager.isAutoCheckDue(now, 0L));
+        assertTrue(UpdateManager.isAutoCheckDue(now, now - day));
+        assertTrue(UpdateManager.isAutoCheckDue(now, now - day - 1L));
+    }
+
+    @Test
+    public void isAutoCheckDue_withinIntervalOrClockSkew_isFalse() {
+        long now = 1_800_000_000_000L;
+        long day = UpdateManager.AUTO_CHECK_MIN_INTERVAL_MS;
+        // 不足 24 小时:跳过;时钟回拨(上次记账落在未来)同样按未到期处理
+        assertFalse(UpdateManager.isAutoCheckDue(now, now - day + 1L));
+        assertFalse(UpdateManager.isAutoCheckDue(now, now + 123L));
     }
 }
