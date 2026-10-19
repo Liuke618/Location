@@ -7,36 +7,18 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
-import android.net.Uri;
 import android.os.Bundle;
-import android.provider.Settings;
-import android.text.TextUtils;
-import android.view.LayoutInflater;
 import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.ListView;
-import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.SimpleAdapter;
 import android.widget.TextView;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.preference.PreferenceManager;
@@ -50,25 +32,18 @@ import com.amap.api.maps.model.Marker;
 import com.amap.api.maps.model.Poi;
 import com.amap.api.services.geocoder.RegeocodeResult;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
-
-import java.io.File;
-import java.util.List;
-import java.util.Map;
 
 import com.yybb.location.service.MockLocationController;
 import com.yybb.location.service.ServiceGoController;
 import com.yybb.location.data.HistoryRepository;
-import com.yybb.location.data.HistoryRepository.LocationRow;
 import com.yybb.location.BaseActivity;
 import com.yybb.location.GoApplication;
 import com.yybb.location.R;
 import com.yybb.location.ui.location.CurrentLocationSource;
 import com.yybb.location.ui.search.PoiSearchHelper;
+import com.yybb.location.ui.search.SearchViewController;
 import com.yybb.location.ui.update.UpdateManager;
-import com.yybb.location.ui.favorite.FavoriteActivity;
-import com.yybb.location.ui.history.HistoryActivity;
 import com.yybb.location.ui.settings.SettingsActivity;
 import com.yybb.location.ui.settings.AmapKeyGuide;
 import com.yybb.location.utils.AmapUtils;
@@ -80,9 +55,12 @@ import com.elvishew.xlog.XLog;
 
 /**
  * 主界面：地图选点与模拟定位的操作入口——选点/POI 搜索/逆地理经 MapController 与 PoiSearchHelper 完成，
- * 模拟服务经 MockLocationController 启停；本类实现 MapEventListener/LocationListener/SensorEventListener 接收回调渲染。
+ * 模拟服务经 MockLocationController 启停；本类实现 MapEventListener/LocationListener 接收回调渲染。
+ * 功能区收编（原内联体原样迁出，行为冻结）：搜索界面 → SearchViewController，输入坐标对话框 →
+ * InputPositionDialog，罗盘传感器 → CompassSensorController，侧边栏菜单 → NavMenuController，
+ * 位置记录（上次位置/历史/收藏） → LocationRecordHelper。
  */
-public class MainActivity extends BaseActivity implements SensorEventListener, MapController.MapEventListener, CurrentLocationSource.LocationListener {
+public class MainActivity extends BaseActivity implements MapController.MapEventListener, CurrentLocationSource.LocationListener {
     /* 对外（POI_* 键名为搜索结果 SimpleAdapter 列契约，随 getTipList 收编于 PoiSearchHelper） */
     public static final String POI_NAME = PoiSearchHelper.POI_NAME;
     public static final String POI_ADDRESS = PoiSearchHelper.POI_ADDRESS;
@@ -100,33 +78,23 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     // showLocation 静态门面委托的当前控制器（onCreate 中赋值，onDestroy 中清空）
     private static MapController sMapController = null;
     private GeocoderHelper mGeocoderHelper;
-    private SensorManager mSensorManager;
-    private Sensor mSensorAccelerometer;
-    private Sensor mSensorMagnetic;
-    private float[] mAccValues = new float[3];//加速度传感器数据
-    private float[] mMagValues = new float[3];//地磁传感器数据
-    private final float[] mR = new float[9];//旋转矩阵，用来保存磁场和加速度的数据
-    private final float[] mDirectionValues = new float[3];//模拟方向传感器的数据（原始数据为弧度）
+    //罗盘传感器（注册/注销与方向计算）收编于 CompassSensorController
+    private CompassSensorController mCompassSensorController;
     /************** 定位 *****************/
     private CurrentLocationSource mCurrentLocationSource;
     private double mCurrentLat = 0.0;       // 当前位置的 GCJ02 纬度
     private double mCurrentLon = 0.0;       // 当前位置的 GCJ02 经度
-    private float mCurrentDirection = 0.0f;
     private boolean isFirstLoc = true; // 是否首次定位
     private MockLocationController mMockController;
     private BroadcastReceiver mStopMockReceiver;
     private FloatingActionButton mButtonStart;
     /*============================== 历史记录 相关 ==============================*/
     private HistoryRepository mHistoryRepository;
+    //位置记录读写（上次位置记忆/历史落库/收藏与默认收藏）收编于 LocationRecordHelper
+    private LocationRecordHelper mLocationRecordHelper;
     /*============================== SearchView 相关 ==============================*/
-    private SearchView searchView;
-    private ListView mSearchList;
-    private LinearLayout mSearchLayout;
-    private ListView mSearchHistoryList;
-    private LinearLayout mHistoryLayout;
-    private MenuItem searchItem;
-    //建议搜索管线：Inputtips 与搜索历史读写收编于 PoiSearchHelper，渲染回调体保留在本类
-    private PoiSearchHelper mPoiSearchHelper;
+    //搜索界面（工具栏 SearchView/建议列表/搜索历史面板）收编于 SearchViewController
+    private SearchViewController mSearchViewController;
     /*============================== 更新 相关 ==============================*/
     //更新检测/下载/安装管线收编于 UpdateManager（对话框组装随流程迁入，见该类）
     private UpdateManager mUpdateManager;
@@ -183,7 +151,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         mMapState = ((GoApplication) getApplicationContext()).getAppContainer().getMapState();
         mMainViewModel = new ViewModelProvider(this, new MainViewModel.Factory(mMapState)).get(MainViewModel.class);
 
-        initNavigationView();
+        //侧边栏导航菜单（条目分发/打赏弹窗）收编于 NavMenuController；"检查更新"经回调转发（点击时才读 mUpdateManager，与原 lambda 一致）
+        new NavMenuController(this, () -> mUpdateManager.checkUpdate(true)).init();
 
         //定位数据源提前创建:地图初始化即接线 LocationSource(蓝点桥接需在启用定位图层前就位)
         mCurrentLocationSource = new CurrentLocationSource(this, this);
@@ -193,9 +162,13 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         //历史仓库提前初始化:冷启动恢复要先查默认收藏(原在 initSearchView 前初始化,时序上晚于恢复路径)
         mHistoryRepository = ((GoApplication) getApplicationContext()).getAppContainer().getHistoryRepository();
 
+        //位置记录读写（上次位置记忆/历史落库/收藏与默认收藏）收编于 LocationRecordHelper
+        mLocationRecordHelper = new LocationRecordHelper(this, sharedPreferences, mGeocoderHelper,
+                mMapState, mMainViewModel, mHistoryRepository, mMapController);
+
         //启动恢复:仅冷启动执行,把上次模拟位置直接就绪(上标记+移视野,选中点可一键 GO)
         if (savedInstanceState == null) {
-            restoreLastPosition();
+            mLocationRecordHelper.restoreLastPosition();
         }
 
         initMapButton();
@@ -225,7 +198,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         ContextCompat.registerReceiver(this, mStopMockReceiver,
                 new IntentFilter(ServiceGoController.ACTION_STOP_MOCK), ContextCompat.RECEIVER_NOT_EXPORTED);
 
-        initSearchView();
+        //搜索界面（工具栏 SearchView/建议列表/搜索历史面板）收编于 SearchViewController
+        mSearchViewController = new SearchViewController(this, mHistoryRepository, mMapState, mMainViewModel, mMapController);
+        mSearchViewController.init();
 
         //更新管线（检测/下载/安装）收编于 UpdateManager，随 Activity 创建并注册下载完成接收器
         mUpdateManager = new UpdateManager();
@@ -245,7 +220,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     protected void onPause() {
         XLog.i("MainActivity: onPause");
         mMapController.onPause();
-        unregisterCompassSensors();
+        mCompassSensorController.unregister();
         super.onPause();
     }
 
@@ -255,7 +230,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         mMapController.onResume();
         applyLocateSelfSetting();
         maybeToastKeyConfigured();
-        registerCompassSensors();
+        mCompassSensorController.register();
         super.onResume();
     }
 
@@ -300,7 +275,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     protected void onStop() {
         XLog.i("MainActivity: onStop");
         //取消注册传感器监听
-        unregisterCompassSensors();
+        mCompassSensorController.unregister();
         super.onStop();
     }
 
@@ -317,7 +292,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         //通知栏停止动作接收器,与 onCreate 注册成对
         unregisterReceiver(mStopMockReceiver);
 
-        unregisterCompassSensors();
+        mCompassSensorController.unregister();
 
         // showLocation 静态门面不再委托本界面的控制器
         sMapController = null;
@@ -335,189 +310,10 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
     public boolean onCreateOptionsMenu(final Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
-        //找到searchView
-        searchItem = menu.findItem(R.id.action_search);
-        searchItem.setOnActionExpandListener(new  MenuItem.OnActionExpandListener() {
-            @Override
-            public boolean onMenuItemActionCollapse(MenuItem item) {
-                mSearchLayout.setVisibility(View.INVISIBLE);
-                mHistoryLayout.setVisibility(View.INVISIBLE);
-                return true;  // Return true to collapse action view
-            }
-            @Override
-            public boolean onMenuItemActionExpand(MenuItem item) {
-                mSearchLayout.setVisibility(View.INVISIBLE);
-                //展示搜索历史（历史行读取收编于 PoiSearchHelper，SimpleAdapter 渲染属 UI 保留在此；
-                //渲染块与长按删除后重取的渲染逐字一致，收编为共用方法 displaySearchHistory）
-                displaySearchHistory();
-
-                return true;  // Return true to expand action view
-            }
-        });
-
-        searchView = (SearchView) searchItem.getActionView();
-        searchView.setIconified(false);// 设置searchView处于展开状态
-        searchView.onActionViewExpanded();// 当展开无输入内容的时候，没有关闭的图标
-        searchView.setIconifiedByDefault(true);//默认为true在框内，设置false则在框外
-        searchView.setSubmitButtonEnabled(false);//显示提交按钮
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                try {
-                    //查询下发与关键字保存收编于 PoiSearchHelper（try/catch 与 UI 处理保留在此，异常语义不变）
-                    mPoiSearchHelper.requestSuggestions(query, mMapState.getCurrentCity(), true);
-                    mPoiSearchHelper.saveQueryHistory(query);
-                    mMapController.clearOverlays();
-                    mSearchLayout.setVisibility(View.INVISIBLE);
-                } catch (Exception e) {
-                    GoUtils.DisplayToast(MainActivity.this, getResources().getString(R.string.app_error_search));
-                    XLog.d(getResources().getString(R.string.app_error_search));
-                }
-
-                return true;
-            }
-
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                //当输入框内容改变的时候回调
-                //搜索历史置为不可见
-                mHistoryLayout.setVisibility(View.INVISIBLE);
-
-                if (newText != null && !newText.isEmpty()) {
-                    try {
-                        //查询下发收编于 PoiSearchHelper
-                        mPoiSearchHelper.requestSuggestions(newText, mMapState.getCurrentCity(), false);
-                    } catch (Exception e) {
-                        GoUtils.DisplayToast(MainActivity.this, getResources().getString(R.string.app_error_search));
-                        XLog.d(getResources().getString(R.string.app_error_search));
-                    }
-                }
-
-                return true;
-            }
-        });
-
-        // 搜索框的清除按钮(该按钮属于安卓系统图标)
-        ImageView closeButton = searchView.findViewById(androidx.appcompat.R.id.search_close_btn);
-        closeButton.setOnClickListener(v -> {
-            EditText et = findViewById(androidx.appcompat.R.id.search_src_text);
-            et.setText("");
-            searchView.setQuery("", false);
-            mSearchLayout.setVisibility(View.INVISIBLE);
-            mHistoryLayout.setVisibility(View.VISIBLE);
-        });
+        //搜索界面（菜单项展开/收起、建议列表、搜索历史面板）收编于 SearchViewController
+        mSearchViewController.setupSearchItem(menu.findItem(R.id.action_search));
 
         return true;
-    }
-
-    @Override
-    public void onSensorChanged(SensorEvent sensorEvent) {
-        if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER){
-            mAccValues = sensorEvent.values;
-        }
-        else if(sensorEvent.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD){
-            mMagValues = sensorEvent.values;
-        }
-
-        SensorManager.getRotationMatrix(mR, null, mAccValues, mMagValues);
-        SensorManager.getOrientation(mR, mDirectionValues);
-        mCurrentDirection = (float) Math.toDegrees(mDirectionValues[0]);    // 弧度转角度
-        if (mCurrentDirection < 0) {    // 由 -180 ~ + 180 转为 0 ~ 360
-            mCurrentDirection += 360;
-        }
-
-        //罗盘方向注入定位源,蓝点随设备朝向旋转
-        if (mCurrentLocationSource != null) {
-            mCurrentLocationSource.setCompassDirection(mCurrentDirection);
-        }
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int i) {
-
-    }
-
-    /*============================== NavigationView 相关 ==============================*/
-    private void initNavigationView() {
-        /*============================== NavigationView 相关 ==============================*/
-        NavigationView mNavigationView = findViewById(R.id.nav_view);
-        mNavigationView.setNavigationItemSelectedListener(item -> {
-            int id = item.getItemId();
-
-            if (id == R.id.nav_favorite) {
-                Intent intent = new Intent(MainActivity.this, FavoriteActivity.class);
-                startActivity(intent);
-            } else if (id == R.id.nav_history) {
-                Intent intent = new Intent(MainActivity.this, HistoryActivity.class);
-
-                startActivity(intent);
-            } else if (id == R.id.nav_settings) {
-                Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
-                startActivity(intent);
-            } else if (id == R.id.nav_dev) {
-                if (!GoUtils.isDeveloperOptionsEnabled(this)) {
-                    GoUtils.DisplayToast(this, getResources().getString(R.string.app_error_dev));
-                } else {
-                    try {
-                        Intent intent = new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS);
-                        startActivity(intent);
-                    } catch (Exception e) {
-                        GoUtils.DisplayToast(this, getResources().getString(R.string.app_error_dev));
-                    }
-                }
-            } else if (id == R.id.nav_update) {
-                mUpdateManager.checkUpdate(true);
-            } else if (id == R.id.nav_feedback) {
-                // 关闭日志或尚未落盘时文件不存在,直接把缺失文件交给 FileProvider 会抛异常,先给可读提示
-                File logFile = new File(getExternalFilesDir("Logs"), GoApplication.LOG_FILE_NAME);
-                if (!logFile.exists()) {
-                    GoUtils.DisplayToast(this, getResources().getString(R.string.app_error_log_missing));
-                } else {
-                    ShareUtils.shareFile(this, logFile, item.getTitle().toString());
-                }
-            } else if (id == R.id.nav_contact) {
-                Uri uri = Uri.parse("https://github.com/Liuke618/Location/issues");
-                Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                startActivity(intent);
-            } else if (id == R.id.nav_donate) {
-                showDonateDialog();
-            }
-
-            DrawerLayout drawer = findViewById(R.id.drawer_layout);
-            drawer.closeDrawer(GravityCompat.START);
-
-            return true;
-        });
-
-        // 直接获取第 0 个头部视图
-        View headerView = mNavigationView.getHeaderView(0);
-        TextView app_version = headerView.findViewById(R.id.app_version);
-        app_version.setText(GoUtils.getVersionName(this));
-    }
-
-    /*============================== 请作者喝杯咖啡 ==============================*/
-
-    /* 支付宝收款码内容,换收款码图片时须与此处及 drawable-nodpi/donate_alipay.jpg 一并更新 */
-    private static final String DONATE_ALIPAY_QR_URL = "https://qr.alipay.com/fkx12229xxaytmszvol0w70";
-
-    /* 弹出打赏弹窗:大图展示支付宝收款码,长按图片经系统分发跳转支付宝付款 */
-    private void showDonateDialog() {
-        View view = LayoutInflater.from(this).inflate(R.layout.dialog_donate, null);
-        ImageView qrView = view.findViewById(R.id.iv_donate_alipay);
-        qrView.setOnLongClickListener(v -> {
-            try {
-                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(DONATE_ALIPAY_QR_URL)));
-            } catch (Exception e) {
-                // 既无浏览器又未装支付宝的极端场景兜底:提示改用截图扫码,不打断弹窗
-                XLog.e("MainActivity: ERROR - open donate alipay");
-                GoUtils.DisplayToast(this, getResources().getString(R.string.donate_jump_failed));
-            }
-            return true;
-        });
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.donate_dialog_title)
-                .setView(view)
-                .show();
     }
 
     /*============================== 主界面地图 相关 ==============================*/
@@ -536,7 +332,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         TextView poiLongitude = poiView.findViewById(R.id.poi_longitude);
         TextView poiLatitude = poiView.findViewById(R.id.poi_latitude);
         ImageButton ibSave = poiView.findViewById(R.id.poi_save);
-        ibSave.setOnClickListener(v -> recordCurrentLocation(mMapState.getSelectedPoint().longitude,
+        ibSave.setOnClickListener(v -> mLocationRecordHelper.recordCurrentLocation(mMapState.getSelectedPoint().longitude,
                 mMapState.getSelectedPoint().latitude, true));
         ImageButton ibCopy = poiView.findViewById(R.id.poi_copy);
         ibCopy.setOnClickListener(v -> {
@@ -554,7 +350,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         ImageButton ibFly = poiView.findViewById(R.id.poi_fly);
         ibFly.setOnClickListener(this::doGoLocation);
         ImageButton ibMark = poiView.findViewById(R.id.poi_mark);
-        ibMark.setOnClickListener(v -> favoriteCurrentLocation(mMapState.getSelectedPoint().longitude,
+        ibMark.setOnClickListener(v -> mLocationRecordHelper.favoriteCurrentLocation(mMapState.getSelectedPoint().longitude,
                 mMapState.getSelectedPoint().latitude));
         // SDK 逆地理构造与监听注册收编于 GeocoderHelper(仅反向通道)
         mGeocoderHelper = new GeocoderHelper();
@@ -591,37 +387,13 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
             }
         });
 
-        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);// 获取传感器管理服务
-        if (mSensorManager != null) {
-            mSensorAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-            mSensorMagnetic = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-        }
-        registerCompassSensors();
-    }
-
-    /**
-     * 罗盘（加速度+地磁）监听注册：SensorManager 不可用或设备缺少对应传感器时必须整体跳过——
-     * 原实现在 onResume 无条件 registerListener，缺传感器时传入 null sensor 即崩溃。
-     */
-    private void registerCompassSensors() {
-        if (mSensorManager == null) {
-            return;
-        }
-        if (mSensorAccelerometer != null) {
-            mSensorManager.registerListener(this, mSensorAccelerometer, SensorManager.SENSOR_DELAY_UI);
-        }
-        if (mSensorMagnetic != null) {
-            mSensorManager.registerListener(this, mSensorMagnetic, SensorManager.SENSOR_DELAY_UI);
-        }
-    }
-
-    /**
-     * 罗盘监听注销：unregisterListener 本身可重复调用，收口只为与注册共用同一处判空。
-     */
-    private void unregisterCompassSensors() {
-        if (mSensorManager != null) {
-            mSensorManager.unregisterListener(this);
-        }
+        //罗盘传感器（注册/注销与方向计算）收编于 CompassSensorController；方向注入定位源（蓝点随设备朝向旋转）
+        mCompassSensorController = new CompassSensorController(this, direction -> {
+            if (mCurrentLocationSource != null) {
+                mCurrentLocationSource.setCompassDirection(direction);
+            }
+        });
+        mCompassSensorController.register();
     }
 
     /*============================== 地图点击回调（原 initMap 监听体逻辑原样移入） ==============================*/
@@ -713,59 +485,15 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         zoomOutBtn.setOnClickListener(v -> mMapController.getAMap().animateCamera(CameraUpdateFactory.zoomOut()));
 
         ImageButton inputPosBtn = this.findViewById(R.id.input_pos);
-        inputPosBtn.setOnClickListener(v -> {
-            AlertDialog dialog;
-            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-            builder.setTitle(getResources().getString(R.string.input_position_title));
-            View view = LayoutInflater.from(MainActivity.this).inflate(R.layout.location_input, null);
-            builder.setView(view);
-            dialog = builder.show();
+        //输入坐标对话框收编于 InputPositionDialog；确认后按原顺序落选中点/标记名/视野（selectPoint→setMarkName→markMap→moveCamera）
+        inputPosBtn.setOnClickListener(v -> InputPositionDialog.show(this, gcj02Point -> {
+            mMainViewModel.selectPoint(gcj02Point);
+            mMapState.setMarkName(getResources().getString(R.string.input_position_mark_name));
 
-            EditText dialog_lng = view.findViewById(R.id.input_longitude);
-            EditText dialog_lat = view.findViewById(R.id.input_latitude);
-            RadioButton rbGcj = view.findViewById(R.id.pos_type_gcj);
+            mMapController.markMap();
 
-            Button btnGo = view.findViewById(R.id.input_position_ok);
-            btnGo.setOnClickListener(v2 -> {
-                String dialog_lng_str = dialog_lng.getText().toString();
-                String dialog_lat_str = dialog_lat.getText().toString();
-
-                if (TextUtils.isEmpty(dialog_lng_str) || TextUtils.isEmpty(dialog_lat_str)) {
-                    GoUtils.DisplayToast(MainActivity.this,getResources().getString(R.string.app_error_input));
-                } else {
-                    // 输入框 digits 放行 "." 与 "-"，"1.2.3"、"-" 这类串可解析失败；解析不过按非法输入处理
-                    double dialog_lng_double = GoUtils.parseDoubleOrDefault(dialog_lng_str, Double.NaN);
-                    double dialog_lat_double = GoUtils.parseDoubleOrDefault(dialog_lat_str, Double.NaN);
-
-                    if (Double.isNaN(dialog_lng_double) || Double.isNaN(dialog_lat_double)) {
-                        GoUtils.DisplayToast(MainActivity.this,getResources().getString(R.string.app_error_input));
-                    } else if (dialog_lng_double > 180.0 || dialog_lng_double < -180.0) {
-                        GoUtils.DisplayToast(MainActivity.this,  getResources().getString(R.string.app_error_longitude));
-                    } else {
-                        if (dialog_lat_double > 90.0 || dialog_lat_double < -90.0) {
-                            GoUtils.DisplayToast(MainActivity.this,  getResources().getString(R.string.app_error_latitude));
-                        } else {
-                            if (rbGcj.isChecked()) {
-                                mMainViewModel.selectPoint(new LatLng(dialog_lat_double, dialog_lng_double));
-                            } else {
-                                double[] gcjLonLat = MapUtils.wgs2gcj(dialog_lng_double, dialog_lat_double);
-                                mMainViewModel.selectPoint(new LatLng(gcjLonLat[1], gcjLonLat[0]));
-                            }
-                            mMapState.setMarkName(getResources().getString(R.string.input_position_mark_name));
-
-                            mMapController.markMap();
-
-                            mMapController.getAMap().moveCamera(CameraUpdateFactory.changeLatLng(mMapState.getSelectedPoint()));
-
-                            dialog.dismiss();
-                        }
-                    }
-                }
-            });
-
-            Button btnCancel = view.findViewById(R.id.input_position_cancel);
-            btnCancel.setOnClickListener(v1 -> dialog.dismiss());
-        });
+            mMapController.getAMap().moveCamera(CameraUpdateFactory.changeLatLng(mMapState.getSelectedPoint()));
+        }));
     }
 
     // 在地图上显示位置（静态门面：委托到当前 MapController，保持原静态调用点不变）
@@ -814,9 +542,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 }
                 Snackbar.make(v, getResources().getString(R.string.main_snack_moved), Snackbar.LENGTH_LONG).show();
 
-                recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude, false);
+                mLocationRecordHelper.recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude, false);
                 //记住本次模拟位置(冷启动恢复用),须在选中点清除前落盘
-                saveLastPosition();
+                mLocationRecordHelper.saveLastPosition();
 
                 //GO 成功:选中点消费置空,原位保留"模拟中"标记指示当前模拟位置
                 LatLng mockedPoint = mMapState.getSelectedPoint();
@@ -832,7 +560,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 GoUtils.showEnableMockLocationDialog(this);
                 XLog.e("无模拟位置权限!");
             } else {
-                if (mMapState.getSelectedPoint() == null && !selectDefaultFavorite()) {
+                if (mMapState.getSelectedPoint() == null && !mLocationRecordHelper.selectDefaultFavorite()) {
                     Snackbar.make(v, getResources().getString(R.string.main_snack_select_first), Snackbar.LENGTH_LONG).show();
                 } else {
                     double[] latLng = MapUtils.gcj02towgs84(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
@@ -848,9 +576,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                     mButtonStart.setImageResource(R.drawable.ic_fly);
                     Snackbar.make(v, getResources().getString(R.string.main_snack_mock_started), Snackbar.LENGTH_LONG).show();
 
-                    recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude, false);
+                    mLocationRecordHelper.recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude, false);
                     //记住本次模拟位置(冷启动恢复用),须在选中点清除前落盘
-                    saveLastPosition();
+                    mLocationRecordHelper.saveLastPosition();
                     //GO 成功:选中点消费置空,原位保留"模拟中"标记指示当前模拟位置
                     LatLng mockedPoint = mMapState.getSelectedPoint();
                     mMainViewModel.clearSelectedPoint();
@@ -862,284 +590,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 }
             }
         }
-    }
-
-    /*============================== 上次位置记忆 ==============================*/
-
-    //落盘当前选中点(GCJ02),作为"上一次定位的位置";GO 两个生效分支调用,须在选中点清除前执行
-    private void saveLastPosition() {
-        LatLng point = mMapState.getSelectedPoint();
-        if (point == null) {
-            return;
-        }
-
-        sharedPreferences.edit()
-                .putString("setting_last_lat", String.valueOf(point.latitude))
-                .putString("setting_last_lng", String.valueOf(point.longitude))
-                .apply();
-    }
-
-    //冷启动恢复:有存值则选中上次模拟位置并移动视野(街道级,与"返回当前位置"一致);无存值保持原默认行为
-    private void restoreLastPosition() {
-        //默认收藏优先于"上次位置":已设默认收藏则冷启动直接就绪默认地址(一键 GO 即模拟默认点)
-        if (selectDefaultFavorite()) {
-            mMapController.getAMap().animateCamera(CameraUpdateFactory.newLatLngZoom(mMapState.getSelectedPoint(), 18.0f));
-            return;
-        }
-
-        String lat = sharedPreferences.getString("setting_last_lat", "");
-        String lng = sharedPreferences.getString("setting_last_lng", "");
-        if (lat.isEmpty() || lng.isEmpty()) {
-            return;
-        }
-
-        try {
-            LatLng lastPoint = new LatLng(Double.parseDouble(lat), Double.parseDouble(lng));
-            mMainViewModel.selectPoint(lastPoint);
-            mMapController.markMap();
-
-            mMapController.getAMap().animateCamera(CameraUpdateFactory.newLatLngZoom(lastPoint, 18.0f));
-        } catch (NumberFormatException e) {
-            //存值损坏时按无存值处理,不阻断启动
-            XLog.e("MainActivity: last position invalid, skip restore");
-        }
-    }
-
-    /*============================== 历史记录 相关 ==============================*/
-
-    // 记录请求的位置信息(逆地理收编于 GeocoderHelper SDK 通道,落库行构造保留在此)
-    // reportResult:仅信息窗"保存"按钮需要成/败提示;"传送"路径的落库是附带动作,失败只记日志,
-    // 不打断"已传送到新位置"主提示
-    private void recordCurrentLocation(double lng, double lat, boolean reportResult) {
-        //参数坐标系:gcj02
-        final double[] latLng = MapUtils.gcj02towgs84(lng, lat);
-
-        mGeocoderHelper.resolveAddress(lng, lat, new GeocoderHelper.AddressCallback() {
-            @Override
-            public void onAddressResolved(int rCode, String formatAddress) {
-                //地址提取三分支收敛于纯函数 extractAddress(失败回退标记名,语义与原 REST 版一致)
-                String address = GeocoderHelper.extractAddress(rCode, formatAddress, mMapState.getMarkName(),
-                        getResources().getString(R.string.history_location_default_name));
-                //镜像逆地理结果(行为冻结:落库路径不变,仅补状态镜像)
-                mMainViewModel.postCurrentAddress(address);
-                addLocationHistoryRow(address, latLng, lng, lat, reportResult);
-            }
-        });
-    }
-
-    // 插表参数：LocationRow 字段与原 ContentValues puts 逐字段对应（WGS84 经纬度、秒级时间戳、GCJ02 原坐标）
-    private void addLocationHistoryRow(String location, double[] wgsLatLng, double lng, double lat, boolean reportResult) {
-        LocationRow locationRow = new LocationRow(location, String.valueOf(wgsLatLng[0]), String.valueOf(wgsLatLng[1]),
-                System.currentTimeMillis() / 1000, Double.toString(lng), Double.toString(lat));
-
-        if (!mHistoryRepository.addLocationRow(locationRow)) {
-            XLog.e("DATABASE: 定位历史落库失败");
-            if (reportResult) {
-                GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_save_failed));
-            }
-            return;
-        }
-
-        if (reportResult) {
-            GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_save));
-        }
-    }
-
-    /*============================== 收藏 相关 ==============================*/
-
-    // 收藏当前选中点(与"保存"同构：GCJ02 入参，逆地理取地址后落收藏表；WGS84 换算只经 MapUtils)
-    private void favoriteCurrentLocation(double lng, double lat) {
-        //参数坐标系:gcj02
-        final double[] latLng = MapUtils.gcj02towgs84(lng, lat);
-
-        mGeocoderHelper.resolveAddress(lng, lat, new GeocoderHelper.AddressCallback() {
-            @Override
-            public void onAddressResolved(int rCode, String formatAddress) {
-                //地址提取收敛于纯函数 extractAddress(失败回退标记名,与"保存"路径一致)
-                String address = GeocoderHelper.extractAddress(rCode, formatAddress, mMapState.getMarkName(),
-                        getResources().getString(R.string.history_location_default_name));
-                addFavoriteRow(address, latLng, lng, lat);
-            }
-        });
-    }
-
-    // 插表参数与 addLocationHistoryRow 逐字段对应(WGS84 经纬度、秒级时间戳、GCJ02 原坐标)
-    private void addFavoriteRow(String location, double[] wgsLatLng, double lng, double lat) {
-        LocationRow favoriteRow = new LocationRow(location, String.valueOf(wgsLatLng[0]), String.valueOf(wgsLatLng[1]),
-                System.currentTimeMillis() / 1000, Double.toString(lng), Double.toString(lat));
-
-        if (!mHistoryRepository.addFavoriteRow(favoriteRow)) {
-            XLog.e("DATABASE: 收藏落库失败");
-            GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_mark_failed));
-            return;
-        }
-
-        GoUtils.DisplayToast(this, getResources().getString(R.string.app_location_mark));
-    }
-
-    // 选中默认收藏点(GCJ02 入图)：已设默认收藏则选中上标记并返回 true，否则不动状态返回 false。
-    // 不套随机偏移——默认地址是确定性目标，与手选点 GO 同待遇
-    private boolean selectDefaultFavorite() {
-        LocationRow def = resolveDefaultFavorite();
-        if (def == null) {
-            return false;
-        }
-        // 坐标串来自收藏表,可能由旧版本写入或被外部改坏:解析不出即按"无默认收藏"处理,
-        // 而不是让冷启动恢复与未选点按 GO 两条路径崩在 NumberFormatException 上
-        double[] gcjLngLat = GoUtils.parseStoredCoordinatePair(def.lngCustom, def.latCustom);
-        if (gcjLngLat == null) {
-            XLog.e("MainActivity: 默认收藏坐标不可解析, 按无默认收藏处理");
-            return false;
-        }
-        mMainViewModel.selectPoint(new LatLng(gcjLngLat[1], gcjLngLat[0]));
-        mMapState.setMarkName(def.location);
-        mMapController.markMap();
-        return true;
-    }
-
-    // 默认收藏以 WGS84 坐标字符串为身份存于偏好(与收藏表先删后插的去重键同构，改名不失效)；
-    // 对应收藏行被删后查不到，即视为无默认
-    private LocationRow resolveDefaultFavorite() {
-        String lng = sharedPreferences.getString("setting_default_favorite_lng_wgs", "");
-        String lat = sharedPreferences.getString("setting_default_favorite_lat_wgs", "");
-        if (lng.isEmpty() || lat.isEmpty()) {
-            return null;
-        }
-        return mHistoryRepository.findFavoriteRowByWgsCoords(lng, lat);
-    }
-
-    /*============================== SearchView 相关 ==============================*/
-    //展示搜索历史（onMenuItemActionExpand 与长按删除后重取两处渲染块逐字一致，原样收编为共用方法）
-    private void displaySearchHistory() {
-        List<Map<String, Object>> data = mPoiSearchHelper.loadSearchHistoryRows();
-        if (data == null) {
-            // 存储读取失败:提示且不渲染历史面板(区别于"无搜索历史"的静默空态)
-            GoUtils.DisplayToast(this, getResources().getString(R.string.app_data_read_failed));
-            return;
-        }
-
-        if (!data.isEmpty()) {
-            SimpleAdapter simAdapt = new SimpleAdapter(
-                    MainActivity.this,
-                    data,
-                    R.layout.search_item,
-                    new String[] {HistoryRepository.DB_COLUMN_KEY,
-                            HistoryRepository.DB_COLUMN_DESCRIPTION,
-                            HistoryRepository.DB_COLUMN_TIMESTAMP,
-                            HistoryRepository.DB_COLUMN_IS_LOCATION,
-                            HistoryRepository.DB_COLUMN_LONGITUDE_CUSTOM,
-                            HistoryRepository.DB_COLUMN_LATITUDE_CUSTOM},
-                    new int[] {R.id.search_key,
-                            R.id.search_description,
-                            R.id.search_timestamp,
-                            R.id.search_isLoc,
-                            R.id.search_longitude,
-                            R.id.search_latitude});
-            mSearchHistoryList.setAdapter(simAdapt);
-            mHistoryLayout.setVisibility(View.VISIBLE);
-        }
-    }
-
-    private void initSearchView() {
-        mSearchLayout = findViewById(R.id.search_linear);
-        mHistoryLayout = findViewById(R.id.search_history_linear);
-
-        mSearchList = findViewById(R.id.search_list_view);
-        mSearchList.setOnItemClickListener((parent, view, position, id) -> {
-            String lng = ((TextView) view.findViewById(R.id.poi_longitude)).getText().toString();
-            String lat = ((TextView) view.findViewById(R.id.poi_latitude)).getText().toString();
-            mMapState.setMarkName(((TextView) view.findViewById(R.id.poi_name)).getText().toString());
-            mMainViewModel.selectPoint(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)));
-            mMapController.getAMap().moveCamera(CameraUpdateFactory.changeLatLng(mMapState.getSelectedPoint()));
-
-            mMapController.markMap();
-
-            //搜索历史 插表参数：POI 点选保存收编于 PoiSearchHelper（gcj02towgs84 换算 + SearchRow 构造 + 落库）
-            mPoiSearchHelper.savePoiSelection(mMapState.getMarkName(),
-                    ((TextView) view.findViewById(R.id.poi_address)).getText().toString(),
-                    mMapState.getSelectedPoint(), lng, lat);
-            mSearchLayout.setVisibility(View.INVISIBLE);
-            searchItem.collapseActionView();
-        });
-        //搜索历史列表的点击监听
-        mSearchHistoryList = findViewById(R.id.search_history_list_view);
-        mSearchHistoryList.setOnItemClickListener((parent, view, position, id) -> {
-            String searchDescription = ((TextView) view.findViewById(R.id.search_description)).getText().toString();
-            String searchKey = ((TextView) view.findViewById(R.id.search_key)).getText().toString();
-            String searchIsLoc = ((TextView) view.findViewById(R.id.search_isLoc)).getText().toString();
-
-            //如果是定位搜索
-            if (searchIsLoc.equals("1")) {
-                String lng = ((TextView) view.findViewById(R.id.search_longitude)).getText().toString();
-                String lat = ((TextView) view.findViewById(R.id.search_latitude)).getText().toString();
-                mMainViewModel.selectPoint(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)));
-                mMapController.getAMap().moveCamera(CameraUpdateFactory.changeLatLng(mMapState.getSelectedPoint()));
-
-                mMapController.markMap();
-
-                //设置列表不可见
-                mHistoryLayout.setVisibility(View.INVISIBLE);
-                searchItem.collapseActionView();
-                //更新表：搜索历史定位点选保存收编于 PoiSearchHelper（gcj02towgs84 换算 + SearchRow 构造 + 落库）
-                mPoiSearchHelper.savePoiSelection(searchKey, searchDescription,
-                        mMapState.getSelectedPoint(), lng, lat);
-            } else if (searchIsLoc.equals("0")) { //如果仅仅是搜索
-                try {
-                    searchView.setQuery(searchKey, true);
-                } catch (Exception e) {
-                    GoUtils.DisplayToast(this, getResources().getString(R.string.app_error_search));
-                    XLog.e(getResources().getString(R.string.app_error_search));
-                }
-            } else {
-                XLog.e(getResources().getString(R.string.app_error_param));
-            }
-        });
-        mSearchHistoryList.setOnItemLongClickListener((parent, view, position, id) -> {
-            new AlertDialog.Builder(MainActivity.this)
-                    .setTitle(getResources().getString(R.string.dialog_title_warning))//这里是表头的内容
-                    .setMessage(getResources().getString(R.string.main_search_delete_confirm))//这里是中间显示的具体信息
-                    .setPositiveButton(getResources().getString(R.string.dialog_button_ok),(dialog, which) -> {
-                        String searchKey = ((TextView) view.findViewById(R.id.search_key)).getText().toString();
-
-                        try {
-                            //删除与历史行重取收编于 PoiSearchHelper，SimpleAdapter 渲染属 UI 保留在此
-                            mPoiSearchHelper.deleteSearchHistory(searchKey);
-                            //删除成功
-                            //展示搜索历史（渲染块与 onMenuItemActionExpand 逐字一致，收编为共用方法）
-                            displaySearchHistory();
-                        } catch (Exception e) {
-                            XLog.e("ERROR: delete database error");
-                            GoUtils.DisplayToast(MainActivity.this,getResources().getString(R.string.history_delete_error));
-                        }
-                    })
-                    .setNegativeButton(getResources().getString(R.string.dialog_button_cancel),
-                            (dialog, which) -> {
-                            })
-                    .show();
-            return true;
-        });
-        //设置搜索建议返回值监听：Inputtips 构造与监听注册收编于 PoiSearchHelper（建议搜索管线），
-        //无结果提示与列表渲染回调体保留在本类（原样）
-        mPoiSearchHelper = new PoiSearchHelper(this, mHistoryRepository, new PoiSearchHelper.SuggestionListener() {
-            @Override
-            public void onSuggestionUnavailable() {
-                GoUtils.DisplayToast(MainActivity.this, getResources().getString(R.string.app_search_null));
-            }
-
-            @Override
-            public void onSuggestionResult(List<Map<String, Object>> data) {
-                //镜像建议结果（行为冻结：渲染保持本回调线程直接渲染路径，时序不变，仅补状态镜像）
-                mMainViewModel.postSearchResults(data);
-                SimpleAdapter simAdapt = new SimpleAdapter(
-                        MainActivity.this,
-                        data,
-                        R.layout.search_poi_item,
-                        new String[] {POI_NAME, POI_ADDRESS, POI_LONGITUDE, POI_LATITUDE}, // 与下面数组元素要一一对应
-                        new int[] {R.id.poi_name, R.id.poi_address, R.id.poi_longitude, R.id.poi_latitude});
-                mSearchList.setAdapter(simAdapt);
-                mSearchLayout.setVisibility(View.VISIBLE);
-            }
-        });
     }
 
 }

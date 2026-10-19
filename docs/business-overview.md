@@ -41,7 +41,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 
 ## 4. 地图选点(主界面核心)
 
-**组件**:`MainActivity`(事件回调与 UI)+ `MapController`(持有 MapView/AMap,注册点击监听、加标记、移相机)+ `MapState`(跨页面共享单例:选中点/标记名/当前城市/标记图标)。
+**组件**:`MainActivity`(装配与事件回调 UI)+ `MapController`(持有 MapView/AMap,注册点击监听、加标记、移相机)+ `MapState`(跨页面共享单例:选中点/标记名/当前城市/标记图标);功能块收编类——`InputPositionDialog`(手动输入坐标对话框)、`CompassSensorController`(罗盘传感器)、`NavMenuController`(侧边栏菜单与打赏)、`LocationRecordHelper`(上次位置/历史落库/收藏与默认收藏)。
 
 - **选点途径**:
   - 单击地图空白处 / 单击地图上任意 POI 建筑点 → 选中该坐标并上标记;
@@ -59,7 +59,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
   - **★收藏**:落收藏表(见 §8)。
 - **冷启动恢复**(`onCreate`,仅 `savedInstanceState == null` 时):**默认收藏优先**——已设默认收藏则直接选中该点上标记;否则读偏好 `setting_last_lat/lng`(上次模拟位置,GCJ02),选中并移相机。首次使用无存值则保持地图默认位置("定位自己的位置"默认关,不再等待首次定位自动缩放;开启开关后随首次定位缩放)。V1 老版本的"上次位置"是 BD09,经 `setting_coord_migrated` 标记一次性迁为 GCJ02。
 - **高德 Key 缺失引导**(`onCreate` 末尾判定一次):生效 key(`AmapUtils.getEffectiveApiKey`,设置自定义→清单内置)为空时弹窗——"去设置"跳 `SettingsActivity` 并经 `EXTRA_ANCHOR_KEY` 锚定滚动到 `setting_amap_api_key` 项,"如何获取"弹申请指引(`AmapKeyGuide`:步骤文案动态带入包名与当前安装包签名 SHA1,支持跳高德控制台、复制 SHA1),"稍后"关闭不打断使用,未配置则下次进主界面仍提示。key 下发在 Application 启动期,`onResume` 检测到设置页返回后已补配则 Toast"重启生效"(仅提示一次)。
-- **打赏入口**(抽屉"更多"分组 →"请作者喝杯咖啡",`showDonateDialog`):弹窗大图展示支付宝收款码(`drawable-nodpi/donate_alipay.jpg`,由 `docs/images/` 原图缩至 720px),**长按**经系统分发打开收款链接(内容常量 `DONATE_ALIPAY_QR_URL`,换收款码图片时与图片一并更新);未装支付宝/无浏览器时 Toast 提示改走截图扫码。微信码因平台限制外部跳转仅在 README 展示。
+- **打赏入口**(抽屉"更多"分组 →"请作者喝杯咖啡",`NavMenuController.showDonateDialog`):弹窗大图展示支付宝收款码(`drawable-nodpi/donate_alipay.jpg`,由 `docs/images/` 原图缩至 720px),**长按**经系统分发打开收款链接(内容常量 `DONATE_ALIPAY_QR_URL`,换收款码图片时与图片一并更新);未装支付宝/无浏览器时 Toast 提示改走截图扫码。微信码因平台限制外部跳转仅在 README 展示。
 - **GO 按钮状态机**(`doGoLocation`,信息窗"传送"同路径):
   1. 前置校验:网络可用 → GPS 开启(否则分别提示/弹引导);
   2. **未在模拟**:先探测"开发者选项→模拟位置信息应用"授权(`GoUtils.isAllowMockLocation`,实际 addTestProvider 试探),未授权弹引导框;选中点为空时尝试选**默认收藏**,仍无则提示"请先点击地图位置或者搜索位置";然后取选中点 `gcj02towgs84` 换算 + 偏好海拔(`setting_altitude`,非法回退 55.0)调用 `start()`——**start 返回 false(权限缺失/服务未起)时不动任何界面状态**,避免制造"已在模拟"假象;成功后:落定位历史(失败仅日志)、存上次位置、选中点消费置空(选中标记不在 GO 后消失,原位换"模拟中"图标保留——`MapController.markMockingPosition`,ic_fly 经 Canvas 栅格化并按 colorPrimary 着色(栅格化结果随控制器缓存复用,不再每次 GO 重建),高德 fromResource 不认向量)、按钮换"传送"图标,若 WiFi 开着再弹"定位闪回"警告;
@@ -70,7 +70,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 
 ## 5. POI 搜索与搜索历史
 
-**组件**:`PoiSearchHelper`(数据侧:Inputtips 建议管线 + 搜索历史读写)+ MainActivity(UI 渲染)。
+**组件**:`PoiSearchHelper`(数据侧:Inputtips 建议管线 + 搜索历史读写)+ `SearchViewController`(UI:工具栏 SearchView 配置、建议列表渲染、搜索历史面板渲染与长按删除)。
 
 - **建议搜索**:SearchView 输入变化/提交即按**当前城市**(来自定位回调)发起高德 Inputtips;`Tip.getPoint()` 可空,入列表前**过滤无坐标项**;结果(名称/区划+地址/经纬度)经 SimpleAdapter 渲染,无结果 Toast。
 - **点选建议项**:选中该 POI 上标记并移相机,同时落**搜索历史**(类型=结果:名称、地址、WGS84+GCJ02 双坐标、秒级时间戳),收起搜索面板。
