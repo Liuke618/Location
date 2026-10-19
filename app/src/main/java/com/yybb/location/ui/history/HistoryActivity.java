@@ -21,8 +21,6 @@ import android.widget.EditText;
 import android.widget.PopupMenu;
 import android.view.Gravity;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -148,19 +146,11 @@ public class HistoryActivity extends BaseActivity {
                 long TimeStamp = row.timestamp;
                 String BD09Longitude = row.lngCustom;
                 String BD09Latitude = row.latCustom;
-                BigDecimal bigDecimalLongitude = BigDecimal.valueOf(Double.parseDouble(Longitude));
-                BigDecimal bigDecimalLatitude = BigDecimal.valueOf(Double.parseDouble(Latitude));
-                BigDecimal bigDecimalBDLongitude = BigDecimal.valueOf(Double.parseDouble(BD09Longitude));
-                BigDecimal bigDecimalBDLatitude = BigDecimal.valueOf(Double.parseDouble(BD09Latitude));
-                double doubleLongitude = bigDecimalLongitude.setScale(11, RoundingMode.HALF_UP).doubleValue();
-                double doubleLatitude = bigDecimalLatitude.setScale(11, RoundingMode.HALF_UP).doubleValue();
-                double doubleBDLongitude = bigDecimalBDLongitude.setScale(11, RoundingMode.HALF_UP).doubleValue();
-                double doubleBDLatitude = bigDecimalBDLatitude.setScale(11, RoundingMode.HALF_UP).doubleValue();
                 item.put(KEY_ID, Integer.toString(ID));
                 item.put(KEY_LOCATION, Location);
                 item.put(KEY_TIME, GoUtils.timeStamp2Date(Long.toString(TimeStamp)));
-                item.put(KEY_LNG_LAT_WGS, "[经度:" + doubleLongitude + " 纬度:" + doubleLatitude + "]");
-                item.put(KEY_LNG_LAT_CUSTOM, "[经度:" + doubleBDLongitude + " 纬度:" + doubleBDLatitude + "]");
+                item.put(KEY_LNG_LAT_WGS, "[经度:" + GoUtils.formatCoordinate(Longitude) + " 纬度:" + GoUtils.formatCoordinate(Latitude) + "]");
+                item.put(KEY_LNG_LAT_CUSTOM, "[经度:" + GoUtils.formatCoordinate(BD09Longitude) + " 纬度:" + GoUtils.formatCoordinate(BD09Latitude) + "]");
                 data.add(item);
             } catch (Exception e) {
                 // 单行数据损坏(如坐标串解析不出)只跳过该行记日志:整表清空会让"有记录"误显示成"没记录"

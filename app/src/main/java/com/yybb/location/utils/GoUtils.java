@@ -21,6 +21,8 @@ import androidx.appcompat.app.AlertDialog;
 import com.elvishew.xlog.XLog;
 import com.yybb.location.R;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -28,7 +30,7 @@ import java.util.Locale;
 
 /**
  * 通用静态工具：环境状态检测（开发者选项/WIFI/移动数据/GPS/模拟位置授权）、版本与应用名获取、
- * 时间戳格式化、数值安全解析（parseDoubleOrDefault）及引导弹窗/Toast。
+ * 时间戳与坐标展示格式化、数值安全解析（parseDoubleOrDefault）及引导弹窗/Toast。
  */
 public class GoUtils {
     public static boolean isDeveloperOptionsEnabled(Context context) {
@@ -232,6 +234,17 @@ public class GoUtils {
         }
 
         return new double[]{lng, lat};
+    }
+
+    /**
+     * 把库存坐标串渲染为列表展示文本（历史/收藏行共用）：解析 double 后按 11 位小数 HALF_UP
+     * 四舍五入、再走 double 原生 toString，收敛浮点噪声（如 121.47370000000001 → 121.4737）。
+     * 刻意保留 double 往返：输出形如 "39.0"/"1.0E7" 的既有显示形态，勿改为 BigDecimal 直转文本。
+     * 脏串（非数字/空串）按原语义抛 NumberFormatException，由调用方按行容错跳过。
+     */
+    public static String formatCoordinate(String value) {
+        return Double.toString(
+                BigDecimal.valueOf(Double.parseDouble(value)).setScale(11, RoundingMode.HALF_UP).doubleValue());
     }
 
     /*============================== 手动输入经纬度（收藏页添加） ==============================*/

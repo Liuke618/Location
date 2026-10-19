@@ -3,6 +3,7 @@ package com.yybb.location.utils;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
@@ -165,5 +166,34 @@ public class GoUtilsTest {
     public void mockWriteInterval_defaultPinnedTo100ms() {
         // 默认档是产品决策(2026-10-14):上游硬编码即 100ms,设置默认与之对齐;字面量锚定防误改
         assertEquals(100L, GoUtils.DEFAULT_MOCK_WRITE_INTERVAL_MS);
+    }
+
+    /*============================== 列表坐标展示格式化(历史/收藏行) ==============================*/
+
+    @Test
+    public void formatCoordinate_typicalStoredValues_keepPlainForm() {
+        // 锚定历史/收藏行改造前内联链路的逐位输出(jshell 实测),含去浮点噪声与 x.0/科学计数法既有形态
+        assertEquals("116.397428", GoUtils.formatCoordinate("116.397428"));
+        assertEquals("-73.9857", GoUtils.formatCoordinate("-73.9857"));
+        assertEquals("39.0", GoUtils.formatCoordinate("39"));
+        assertEquals("1.0E7", GoUtils.formatCoordinate("1.0E7"));
+        assertEquals("121.4737", GoUtils.formatCoordinate("121.47370000000001"));
+    }
+
+    @Test
+    public void formatCoordinate_extraPrecision_roundsHalfUpAt11Decimals() {
+        assertEquals("116.39742812346", GoUtils.formatCoordinate("116.397428123456789"));
+        assertEquals("0.12345678901", GoUtils.formatCoordinate("0.123456789012345"));
+        assertEquals("0.12345678902", GoUtils.formatCoordinate("0.123456789015"));
+        // HALF_UP 对负数按绝对值进位;-1e-12 这类极小值经 11 位小数收敛为 0.0(既有显示语义)
+        assertEquals("-1.0", GoUtils.formatCoordinate("-0.999999999995"));
+        assertEquals("0.0", GoUtils.formatCoordinate("0.000000000001"));
+    }
+
+    @Test
+    public void formatCoordinate_malformed_throwsForRowLevelSkip() {
+        // 脏串不在此吞掉:异常由历史/收藏列表的按行容错捕获,跳过该行并记日志
+        assertThrows(NumberFormatException.class, () -> GoUtils.formatCoordinate("abc"));
+        assertThrows(NumberFormatException.class, () -> GoUtils.formatCoordinate(""));
     }
 }

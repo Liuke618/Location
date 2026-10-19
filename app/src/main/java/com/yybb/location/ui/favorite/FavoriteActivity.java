@@ -23,8 +23,6 @@ import android.widget.PopupMenu;
 import android.widget.RadioButton;
 import android.view.Gravity;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -156,20 +154,12 @@ public class FavoriteActivity extends BaseActivity {
                 long TimeStamp = row.timestamp;
                 String GCJLongitude = row.lngCustom;
                 String GCJLatitude = row.latCustom;
-                BigDecimal bigDecimalLongitude = BigDecimal.valueOf(Double.parseDouble(Longitude));
-                BigDecimal bigDecimalLatitude = BigDecimal.valueOf(Double.parseDouble(Latitude));
-                BigDecimal bigDecimalGCJLongitude = BigDecimal.valueOf(Double.parseDouble(GCJLongitude));
-                BigDecimal bigDecimalGCJLatitude = BigDecimal.valueOf(Double.parseDouble(GCJLatitude));
-                double doubleLongitude = bigDecimalLongitude.setScale(11, RoundingMode.HALF_UP).doubleValue();
-                double doubleLatitude = bigDecimalLatitude.setScale(11, RoundingMode.HALF_UP).doubleValue();
-                double doubleGCJLongitude = bigDecimalGCJLongitude.setScale(11, RoundingMode.HALF_UP).doubleValue();
-                double doubleGCJLatitude = bigDecimalGCJLatitude.setScale(11, RoundingMode.HALF_UP).doubleValue();
                 item.put(KEY_ID, Integer.toString(ID));
                 // 默认收藏名称前加 ★ 标识(仅展示层加前缀,存储值不变)
                 item.put(KEY_LOCATION, isDefaultFavorite(Longitude, Latitude) ? "★ " + Location : Location);
                 item.put(KEY_TIME, GoUtils.timeStamp2Date(Long.toString(TimeStamp)));
-                item.put(KEY_LNG_LAT_WGS, "[经度:" + doubleLongitude + " 纬度:" + doubleLatitude + "]");
-                item.put(KEY_LNG_LAT_CUSTOM, "[经度:" + doubleGCJLongitude + " 纬度:" + doubleGCJLatitude + "]");
+                item.put(KEY_LNG_LAT_WGS, "[经度:" + GoUtils.formatCoordinate(Longitude) + " 纬度:" + GoUtils.formatCoordinate(Latitude) + "]");
+                item.put(KEY_LNG_LAT_CUSTOM, "[经度:" + GoUtils.formatCoordinate(GCJLongitude) + " 纬度:" + GoUtils.formatCoordinate(GCJLatitude) + "]");
                 // SimpleAdapter 只读声明键，多余键无副作用
                 item.put(KEY_LNG_WGS_RAW, Longitude);
                 item.put(KEY_LAT_WGS_RAW, Latitude);
