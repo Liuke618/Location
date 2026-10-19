@@ -47,6 +47,8 @@ public class MapController {
     private final MapEventListener mListener;
     //当前选中点标记(markMap/showLocation 复用;长按逆地理完成后在其上弹信息窗)
     private Marker mMarker;
+    //"模拟中"标记图标的栅格化缓存(见 markMockingPosition;随控制器生命周期失效)
+    private BitmapDescriptor mMockingIcon;
 
     public MapController(MapView mapView, AMap aMap, MapState mapState, MapEventListener listener) {
         mMapView = mapView;
@@ -130,10 +132,14 @@ public class MapController {
     //(再选新点经 markMap 顶掉;停服时由持有者经 clearOverlays 清除)。锚点取中心,区别于底部尖端的选中图钉
     public void markMockingPosition(LatLng gcjPoint) {
         mAMap.clear();
+        if (mMockingIcon == null) {
+            //栅格化结果与主题色在本控制器(≈Activity)生命周期内不变,缓存复用,避免每次 GO/传送都重建位图
+            mMockingIcon = BitmapDescriptorFactory.fromBitmap(rasterize(R.drawable.ic_fly));
+        }
         mMarker = mAMap.addMarker(new MarkerOptions()
                 .position(gcjPoint)
                 .anchor(0.5f, 0.5f)
-                .icon(BitmapDescriptorFactory.fromBitmap(rasterize(R.drawable.ic_fly))));
+                .icon(mMockingIcon));
     }
 
     //高德 fromResource 按 BitmapFactory 解码、不认向量资源,ic_fly 需经 Canvas 手动栅格化;
