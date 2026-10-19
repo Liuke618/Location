@@ -801,8 +801,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 //镜像模拟运行状态（MockLocationController 无回调，由调用点通知）
                 mMainViewModel.setMockRunning(false);
                 mMapController.clearOverlays(); //模拟中标记随停服移除
-                Snackbar.make(v, "模拟位置已终止", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                Snackbar.make(v, getResources().getString(R.string.main_snack_mock_stopped), Snackbar.LENGTH_LONG).show();
                 mButtonStart.setImageResource(R.drawable.ic_position);
             } else {
                 double[] latLng = MapUtils.gcj02towgs84(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
@@ -813,8 +812,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                     GoUtils.DisplayToast(this, getResources().getString(R.string.app_error_mock_service));
                     return;
                 }
-                Snackbar.make(v, "已传送到新位置", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                Snackbar.make(v, getResources().getString(R.string.main_snack_moved), Snackbar.LENGTH_LONG).show();
 
                 recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude, false);
                 //记住本次模拟位置(冷启动恢复用),须在选中点清除前落盘
@@ -835,8 +833,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                 XLog.e("无模拟位置权限!");
             } else {
                 if (mMapState.getSelectedPoint() == null && !selectDefaultFavorite()) {
-                    Snackbar.make(v, "请先点击地图位置或者搜索位置", Snackbar.LENGTH_LONG)
-                            .setAction("Action", null).show();
+                    Snackbar.make(v, getResources().getString(R.string.main_snack_select_first), Snackbar.LENGTH_LONG).show();
                 } else {
                     double[] latLng = MapUtils.gcj02towgs84(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude);
                     double alt = GoUtils.parseDoubleOrDefault(sharedPreferences.getString("setting_altitude", "55.0"), 55.0);
@@ -849,8 +846,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                     //镜像模拟运行状态（MockLocationController 无回调，由调用点通知）
                     mMainViewModel.setMockRunning(true);
                     mButtonStart.setImageResource(R.drawable.ic_fly);
-                    Snackbar.make(v, "模拟位置已启动", Snackbar.LENGTH_LONG)
-                            .setAction("Action", null).show();
+                    Snackbar.make(v, getResources().getString(R.string.main_snack_mock_started), Snackbar.LENGTH_LONG).show();
 
                     recordCurrentLocation(mMapState.getSelectedPoint().longitude, mMapState.getSelectedPoint().latitude, false);
                     //记住本次模拟位置(冷启动恢复用),须在选中点清除前落盘
