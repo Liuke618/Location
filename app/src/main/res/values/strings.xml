@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">任意门</string>
     <string name="app_settings">设置</string>
     <string name="app_history">历史记录</string>
@@ -46,6 +46,11 @@
     <string name="app_location_mark_failed">收藏失败，请重试</string>
     <string name="app_data_read_failed">数据读取失败，请重试</string>
 
+    <!-- 通用对话框(标题与按钮;多处弹窗共用,文案与改造前逐字一致) -->
+    <string name="dialog_title_warning">警告</string>
+    <string name="dialog_button_ok">确定</string>
+    <string name="dialog_button_cancel">取消</string>
+
     <!-- 欢迎页 -->
     <string name="welcome_btn_txt">进入应用</string>
     <string name="app_btn_agree">同意并继续</string>
@@ -72,6 +77,16 @@
     </string-array>
     <string name="setting_mock_write_interval_summary">模拟位置按此周期持续写入;默认 100 毫秒,修改即时生效。周期越短定位刷新越快、越耗电(当前:%s)</string>
 
+    <!-- 位置模拟前置条件对话框(GoUtils) -->
+    <string name="mock_enable_title">启用位置模拟</string>
+    <string name="mock_enable_message">请在\"开发者选项→选择模拟位置信息应用\"中进行设置</string>
+    <string name="mock_enable_go_settings">设置</string>
+    <string name="gps_enable_title">启用定位服务</string>
+    <string name="gps_enable_message">是否开启 GPS 定位服务?</string>
+    <string name="wifi_warning_message">开启 WIFI 后（即使没有连接热点）将导致定位闪回真实位置。建议关闭 WIFI，使用移动流量进行游戏！</string>
+    <string name="wifi_warning_go_close">去关闭</string>
+    <string name="wifi_warning_ignore">忽略</string>
+
     <!-- 位置偏移相关参数 -->
     <string name="setting_group_location_offset">位置偏移</string>
     <string name="setting_random_offset">随机偏移</string>
@@ -79,6 +94,7 @@
     <string name="setting_random_offset_default">10.0</string>
     <string name="setting_lat_max_offset">经度最大偏移距离(米)</string>
     <string name="setting_lon_max_offset">纬度最大偏移距离(米)</string>
+    <string name="random_offset_message">经度偏移: %1$.2f米\n纬度偏移: %2$.2f米</string>
     <!-- 高德 API Key 运行时配置 -->
     <string name="setting_amap_api_key">高德 API Key</string>
     <string name="setting_amap_api_key_set">已自定义 Key</string>
@@ -114,6 +130,19 @@
     <string name="setting_author">开发者</string>
     <string name="setting_auto_check_update">自动检查更新</string>
     <string name="setting_auto_check_update_summary">启动时检测新版本并弹窗提醒，关闭后仍可在侧边栏手动检查</string>
+
+    <!-- 历史/收藏列表共用交互(两页经 BaseRecordListActivity 共用;菜单动作经 itemId 分发,不依赖显示文案) -->
+    <string name="record_menu_edit">编辑</string>
+    <string name="record_menu_delete">删除</string>
+    <string name="record_rename_title">名称</string>
+    <string name="record_rename_confirm">确认</string>
+    <string name="history_menu_favorite">收藏</string>
+    <string name="favorite_menu_set_default">设为默认</string>
+    <string name="favorite_menu_clear_default">取消默认</string>
+    <string name="history_delete_one_confirm">确定要删除该项历史记录吗?</string>
+    <string name="history_delete_all_confirm">确定要删除全部历史记录吗?</string>
+    <string name="favorite_delete_one_confirm">确定要删除该项收藏吗?</string>
+    <string name="favorite_delete_all_confirm">确定要删除全部收藏吗?</string>
 
     <!-- 历史记录页面 -->
     <string name="history_expiration">7</string>
@@ -176,6 +205,13 @@
     <string name="main_snack_mock_started">模拟位置已启动</string>
     <string name="main_snack_moved">已传送到新位置</string>
     <string name="main_snack_select_first">请先点击地图位置或者搜索位置</string>
+    <string name="input_position_title">请输入经度和纬度</string>
+    <string name="input_position_mark_name">手动输入的坐标</string>
+    <string name="main_share_position">分享位置</string>
+    <string name="main_search_delete_confirm">确定要删除该项搜索记录吗?</string>
+
+    <!-- 搜索 -->
+    <string name="search_keyword_desc">搜索关键字</string>
 
     <!-- 地图 -->
     <string name="map_pic_sate">卫星图</string>
@@ -184,6 +220,8 @@
     <!-- 更新 -->
     <string name="update_title">新版本可用</string>
     <string name="update_downloading">升级文件下载中。。。</string>
+    <!-- 英文省略号为既有用户可见文案(行为冻结不改成 …);TypographyEllipsis 仅风格建议,按现状豁免 -->
+    <string name="update_download_description" tools:ignore="TypographyEllipsis">正在下载新版本...</string>
     <string name="update_verify_failed">更新包校验未通过，已取消安装</string>
     <string name="update_download_failed">新版本下载失败，请检查网络后重试</string>
     <string name="update_last">恭喜，任意门已是最新版</string>

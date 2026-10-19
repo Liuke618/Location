@@ -104,11 +104,11 @@ public abstract class BaseRecordListActivity extends BaseActivity {
     /** 改名 */
     protected abstract boolean renameRecord(int id, String newName);
 
-    /** 填充长按菜单项（子类决定条目、文案与顺序） */
+    /** 填充长按菜单项（子类决定条目、文案与顺序;itemId 供点击分发,不依赖显示文案） */
     protected abstract void onCreateLongClickMenu(Menu menu, String locID);
 
-    /** 长按菜单点击分发（按标题，与原 switch 语义一致） */
-    protected abstract boolean onLongClickMenuItem(String title, String locID, String name);
+    /** 长按菜单点击分发（按菜单项 id;资源化后逻辑不再与显示文案耦合） */
+    protected abstract boolean onLongClickMenuItem(int itemId, String locID, String name);
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -204,7 +204,7 @@ public abstract class BaseRecordListActivity extends BaseActivity {
 
             popupMenu.setOnMenuItemClickListener(item -> {
                 String name = ((TextView) view.findViewById(R.id.LocationText)).getText().toString();
-                return onLongClickMenuItem(item.getTitle().toString(), locID, name);
+                return onLongClickMenuItem(item.getItemId(), locID, name);
             });
 
             popupMenu.show();
@@ -250,9 +250,9 @@ public abstract class BaseRecordListActivity extends BaseActivity {
 
     protected void showDeleteDialog(String locID, String message, int okToastRes, int errorToastRes) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("警告");
+        builder.setTitle(getResources().getString(R.string.dialog_title_warning));
         builder.setMessage(message);
-        builder.setPositiveButton("确定", (dialog, whichButton) -> {
+        builder.setPositiveButton(getResources().getString(R.string.dialog_button_ok), (dialog, whichButton) -> {
             boolean deleteRet = deleteRecord(Integer.parseInt(locID));
             if (deleteRet) {
                 GoUtils.DisplayToast(BaseRecordListActivity.this, getResources().getString(okToastRes));
@@ -261,16 +261,16 @@ public abstract class BaseRecordListActivity extends BaseActivity {
                 GoUtils.DisplayToast(BaseRecordListActivity.this, getResources().getString(errorToastRes));
             }
         });
-        builder.setNegativeButton("取消", null);
+        builder.setNegativeButton(getResources().getString(R.string.dialog_button_cancel), null);
 
         builder.show();
     }
 
     protected void showClearAllDialog(String message, int okToastRes, int errorToastRes) {
         new AlertDialog.Builder(this)
-                .setTitle("警告")//这里是表头的内容
+                .setTitle(getResources().getString(R.string.dialog_title_warning))//这里是表头的内容
                 .setMessage(message)//这里是中间显示的具体信息
-                .setPositiveButton("确定",
+                .setPositiveButton(getResources().getString(R.string.dialog_button_ok),
                         (dialog, which) -> {
                             if (deleteRecord(-1)) {
                                 GoUtils.DisplayToast(this, getResources().getString(okToastRes));
@@ -279,7 +279,7 @@ public abstract class BaseRecordListActivity extends BaseActivity {
                                 GoUtils.DisplayToast(this, getResources().getString(errorToastRes));
                             }
                         })
-                .setNegativeButton("取消",
+                .setNegativeButton(getResources().getString(R.string.dialog_button_cancel),
                         (dialog, which) -> {
                         })
                 .show();
@@ -291,9 +291,9 @@ public abstract class BaseRecordListActivity extends BaseActivity {
         input.setText(name);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("名称");
+        builder.setTitle(getResources().getString(R.string.record_rename_title));
         builder.setView(input);
-        builder.setPositiveButton("确认", (dialog, whichButton) -> {
+        builder.setPositiveButton(getResources().getString(R.string.record_rename_confirm), (dialog, whichButton) -> {
             String userInput = input.getText().toString();
             if (renameRecord(Integer.parseInt(locID), userInput)) {
                 updateRecordList();
@@ -301,7 +301,7 @@ public abstract class BaseRecordListActivity extends BaseActivity {
                 GoUtils.DisplayToast(BaseRecordListActivity.this, getResources().getString(renameErrorRes));
             }
         });
-        builder.setNegativeButton("取消", null);
+        builder.setNegativeButton(getResources().getString(R.string.dialog_button_cancel), null);
 
         builder.show();
     }

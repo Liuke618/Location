@@ -10,6 +10,7 @@ import com.amap.api.services.help.Inputtips;
 import com.amap.api.services.help.InputtipsQuery;
 import com.amap.api.services.help.Tip;
 
+import com.yybb.location.R;
 import com.yybb.location.data.HistoryRepository;
 import com.yybb.location.data.HistoryRepository.SearchRow;
 import com.yybb.location.utils.MapUtils;
@@ -91,7 +92,8 @@ public class PoiSearchHelper {
      */
     public void saveQueryHistory(String query) {
         //搜索历史 插表参数（纯关键字搜索，经纬度字段为空，与原插表缺省列语义一致）
-        SearchRow searchRow = new SearchRow(query, "搜索关键字", HistoryRepository.DB_SEARCH_TYPE_KEY,
+        SearchRow searchRow = new SearchRow(query,
+                mContext.getResources().getString(R.string.search_keyword_desc), HistoryRepository.DB_SEARCH_TYPE_KEY,
                 null, null, null, null, System.currentTimeMillis() / 1000);
 
         mHistoryRepository.addSearchRow(searchRow);

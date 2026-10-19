@@ -103,32 +103,42 @@ public class FavoriteActivity extends BaseRecordListActivity {
         }
     }
 
+    /* 长按菜单项 id（菜单每次新建，id 仅在本页内区分动作；默认项按菜单弹出时的状态二选一） */
+    private static final int MENU_ID_EDIT = 1;
+    private static final int MENU_ID_SET_DEFAULT = 2;
+    private static final int MENU_ID_CLEAR_DEFAULT = 3;
+    private static final int MENU_ID_DELETE = 4;
+
     @Override
     protected void onCreateLongClickMenu(Menu menu, String locID) {
-        menu.add("编辑");
-        menu.add(isDefaultFavoriteByLocId(locID) ? "取消默认" : "设为默认");
-        menu.add("删除");
+        // 菜单文案与动作在弹出时一并确定(同一次布尔读),与原按标题分发的可见行为一致
+        boolean isDefault = isDefaultFavoriteByLocId(locID);
+        menu.add(Menu.NONE, MENU_ID_EDIT, Menu.NONE, getResources().getString(R.string.record_menu_edit));
+        menu.add(Menu.NONE, isDefault ? MENU_ID_CLEAR_DEFAULT : MENU_ID_SET_DEFAULT, Menu.NONE,
+                getResources().getString(isDefault ? R.string.favorite_menu_clear_default : R.string.favorite_menu_set_default));
+        menu.add(Menu.NONE, MENU_ID_DELETE, Menu.NONE, getResources().getString(R.string.record_menu_delete));
     }
 
     @Override
-    protected boolean onLongClickMenuItem(String title, String locID, String name) {
-        switch (title) {
-            case "编辑":
-                showInputDialog(locID, name, R.string.favorite_rename_error);
-                return true;
-            case "设为默认":
-                setDefaultFavorite(locID);
-                return true;
-            case "取消默认":
-                clearDefaultFavorite();
-                return true;
-            case "删除":
-                showDeleteDialog(locID, "确定要删除该项收藏吗?",
-                        R.string.favorite_delete_ok, R.string.favorite_delete_error);
-                return true;
-            default:
-                return false;
+    protected boolean onLongClickMenuItem(int itemId, String locID, String name) {
+        if (itemId == MENU_ID_EDIT) {
+            showInputDialog(locID, name, R.string.favorite_rename_error);
+            return true;
         }
+        if (itemId == MENU_ID_SET_DEFAULT) {
+            setDefaultFavorite(locID);
+            return true;
+        }
+        if (itemId == MENU_ID_CLEAR_DEFAULT) {
+            clearDefaultFavorite();
+            return true;
+        }
+        if (itemId == MENU_ID_DELETE) {
+            showDeleteDialog(locID, getResources().getString(R.string.favorite_delete_one_confirm),
+                    R.string.favorite_delete_ok, R.string.favorite_delete_error);
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -139,7 +149,7 @@ public class FavoriteActivity extends BaseRecordListActivity {
             return true;
         }
         if (id == R.id.action_clear) {
-            showClearAllDialog("确定要删除全部收藏吗?",
+            showClearAllDialog(getResources().getString(R.string.favorite_delete_all_confirm),
                     R.string.favorite_delete_ok, R.string.favorite_delete_error);
             return true;
         }

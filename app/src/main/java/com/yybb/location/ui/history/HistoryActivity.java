@@ -72,35 +72,40 @@ public class HistoryActivity extends BaseRecordListActivity {
         }
     }
 
+    /* 长按菜单项 id（菜单每次新建，id 仅在本页内区分动作，点击分发不依赖显示文案） */
+    private static final int MENU_ID_EDIT = 1;
+    private static final int MENU_ID_FAVORITE = 2;
+    private static final int MENU_ID_DELETE = 3;
+
     @Override
     protected void onCreateLongClickMenu(Menu menu, String locID) {
-        menu.add("编辑");
-        menu.add("收藏");
-        menu.add("删除");
+        menu.add(Menu.NONE, MENU_ID_EDIT, Menu.NONE, getResources().getString(R.string.record_menu_edit));
+        menu.add(Menu.NONE, MENU_ID_FAVORITE, Menu.NONE, getResources().getString(R.string.history_menu_favorite));
+        menu.add(Menu.NONE, MENU_ID_DELETE, Menu.NONE, getResources().getString(R.string.record_menu_delete));
     }
 
     @Override
-    protected boolean onLongClickMenuItem(String title, String locID, String name) {
-        switch (title) {
-            case "编辑":
-                showInputDialog(locID, name, R.string.history_rename_error);
-                return true;
-            case "收藏":
-                favoriteRecord(Integer.parseInt(locID));
-                return true;
-            case "删除":
-                showDeleteDialog(locID, "确定要删除该项历史记录吗?",
-                        R.string.history_delete_ok, R.string.history_delete_error);
-                return true;
-            default:
-                return false;
+    protected boolean onLongClickMenuItem(int itemId, String locID, String name) {
+        if (itemId == MENU_ID_EDIT) {
+            showInputDialog(locID, name, R.string.history_rename_error);
+            return true;
         }
+        if (itemId == MENU_ID_FAVORITE) {
+            favoriteRecord(Integer.parseInt(locID));
+            return true;
+        }
+        if (itemId == MENU_ID_DELETE) {
+            showDeleteDialog(locID, getResources().getString(R.string.history_delete_one_confirm),
+                    R.string.history_delete_ok, R.string.history_delete_error);
+            return true;
+        }
+        return false;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.action_delete) {
-            showClearAllDialog("确定要删除全部历史记录吗?",
+            showClearAllDialog(getResources().getString(R.string.history_delete_all_confirm),
                     R.string.history_delete_ok, R.string.history_delete_error);
             return true;
         }

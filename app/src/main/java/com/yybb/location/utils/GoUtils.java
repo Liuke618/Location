@@ -303,9 +303,9 @@ public class GoUtils {
     //提醒开启位置模拟的弹框
     public static  void showEnableMockLocationDialog(Context context) {
         new AlertDialog.Builder(context)
-                .setTitle("启用位置模拟")//这里是表头的内容
-                .setMessage("请在\"开发者选项→选择模拟位置信息应用\"中进行设置")//这里是中间显示的具体信息
-                .setPositiveButton("设置",(dialog, which) -> {
+                .setTitle(context.getResources().getString(R.string.mock_enable_title))//这里是表头的内容
+                .setMessage(context.getResources().getString(R.string.mock_enable_message))//这里是中间显示的具体信息
+                .setPositiveButton(context.getResources().getString(R.string.mock_enable_go_settings),(dialog, which) -> {
                     try {
                         Intent intent = new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -314,7 +314,7 @@ public class GoUtils {
                         XLog.e("GOUTILS: 跳转开发者选项失败", e);
                     }
                 })
-                .setNegativeButton("取消",(dialog, which) -> {
+                .setNegativeButton(context.getResources().getString(R.string.dialog_button_cancel),(dialog, which) -> {
                 })
                 .show();
     }
@@ -322,9 +322,9 @@ public class GoUtils {
     //显示开启GPS的提示
     public static  void showEnableGpsDialog(Context context) {
         new AlertDialog.Builder(context)
-                .setTitle("启用定位服务")//这里是表头的内容
-                .setMessage("是否开启 GPS 定位服务?")//这里是中间显示的具体信息
-                .setPositiveButton("确定",(dialog, which) -> {
+                .setTitle(context.getResources().getString(R.string.gps_enable_title))//这里是表头的内容
+                .setMessage(context.getResources().getString(R.string.gps_enable_message))//这里是中间显示的具体信息
+                .setPositiveButton(context.getResources().getString(R.string.dialog_button_ok),(dialog, which) -> {
                     try {
                         Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
                         context.startActivity(intent);
@@ -332,7 +332,7 @@ public class GoUtils {
                         XLog.e("GOUTILS: 跳转定位设置失败", e);
                     }
                 })
-                .setNegativeButton("取消",(dialog, which) -> {
+                .setNegativeButton(context.getResources().getString(R.string.dialog_button_cancel),(dialog, which) -> {
 
                 })
                 .show();
@@ -341,9 +341,9 @@ public class GoUtils {
     // 提醒开启位置模拟的弹框
     public static  void showDisableWifiDialog(Context context) {
         new AlertDialog.Builder(context)
-                .setTitle("警告")
-                .setMessage("开启 WIFI 后（即使没有连接热点）将导致定位闪回真实位置。建议关闭 WIFI，使用移动流量进行游戏！")
-                .setPositiveButton("去关闭",(dialog, which) -> {
+                .setTitle(context.getResources().getString(R.string.dialog_title_warning))
+                .setMessage(context.getResources().getString(R.string.wifi_warning_message))
+                .setPositiveButton(context.getResources().getString(R.string.wifi_warning_go_close),(dialog, which) -> {
                     try {
                         Intent intent = new Intent(Settings.ACTION_WIFI_SETTINGS);
                         context.startActivity(intent);
@@ -351,7 +351,7 @@ public class GoUtils {
                         XLog.e("GOUTILS: 跳转 WiFi 设置失败", e);
                     }
                 })
-                .setNegativeButton("忽略",(dialog, which) -> {
+                .setNegativeButton(context.getResources().getString(R.string.wifi_warning_ignore),(dialog, which) -> {
                 })
                 .show();
     }
@@ -377,7 +377,8 @@ public class GoUtils {
         lon += randomLonOffset / 111320;    // (meters -> longitude)
         lat += randomLatOffset / 110574;    // (meters -> latitude)
 
-        String offsetMessage = String.format(Locale.US, "经度偏移: %.2f米\n纬度偏移: %.2f米", randomLonOffset, randomLatOffset);
+        String offsetMessage = String.format(Locale.US,
+                context.getResources().getString(R.string.random_offset_message), randomLonOffset, randomLatOffset);
         DisplayToast(context, offsetMessage);
 
         return new String[]{String.valueOf(lon), String.valueOf(lat)};

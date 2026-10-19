@@ -36,6 +36,7 @@ com.yybb.location          # 应用包名(applicationId/namespace)
 
 - 纯 Java(无 Kotlin/DI 框架/Robolectric);测试仅 JVM(JUnit4 + core-testing),新测试放 `app/src/test` 镜像包
 - 注释为中文,匹配所在文件风格
+- 用户可见文案一律收录 `res/values/strings.xml`(通用对话框标题/按钮用 `dialog_*` 键);交互逻辑(菜单/按钮)用 itemId 等标识分发,不依赖显示文案
 - **行尾混杂**:约半数文件为 CRLF(WelcomeActivity/MainActivity/ServiceGo/HistoryActivity/GoUtils/MapUtils/多数 res xml/build 脚本等),另一部分为 LF(如 FavoriteActivity/MainViewModel)——**编辑任何文件前先检测行尾并保持原样**,勿整文件重写
 - 重构纪律:行为冻结(用户可见行为/时序零变化),以 git 实际行为为准而非计划文本(本项目有过计划文本与旧代码双写语义不一致的先例)
 

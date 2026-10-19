@@ -550,7 +550,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
             GoUtils.DisplayToast(this,  getResources().getString(R.string.app_location_copy));
         });
         ImageButton ibShare = poiView.findViewById(R.id.poi_share);
-        ibShare.setOnClickListener(v -> ShareUtils.shareText(MainActivity.this, "分享位置", poiLongitude.getText()+","+poiLatitude.getText()));
+        ibShare.setOnClickListener(v -> ShareUtils.shareText(MainActivity.this, getResources().getString(R.string.main_share_position), poiLongitude.getText()+","+poiLatitude.getText()));
         ImageButton ibFly = poiView.findViewById(R.id.poi_fly);
         ibFly.setOnClickListener(this::doGoLocation);
         ImageButton ibMark = poiView.findViewById(R.id.poi_mark);
@@ -716,7 +716,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         inputPosBtn.setOnClickListener(v -> {
             AlertDialog dialog;
             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-            builder.setTitle("请输入经度和纬度");
+            builder.setTitle(getResources().getString(R.string.input_position_title));
             View view = LayoutInflater.from(MainActivity.this).inflate(R.layout.location_input, null);
             builder.setView(view);
             dialog = builder.show();
@@ -751,7 +751,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                                 double[] gcjLonLat = MapUtils.wgs2gcj(dialog_lng_double, dialog_lat_double);
                                 mMainViewModel.selectPoint(new LatLng(gcjLonLat[1], gcjLonLat[0]));
                             }
-                            mMapState.setMarkName("手动输入的坐标");
+                            mMapState.setMarkName(getResources().getString(R.string.input_position_mark_name));
 
                             mMapController.markMap();
 
@@ -1096,9 +1096,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
         });
         mSearchHistoryList.setOnItemLongClickListener((parent, view, position, id) -> {
             new AlertDialog.Builder(MainActivity.this)
-                    .setTitle("警告")//这里是表头的内容
-                    .setMessage("确定要删除该项搜索记录吗?")//这里是中间显示的具体信息
-                    .setPositiveButton("确定",(dialog, which) -> {
+                    .setTitle(getResources().getString(R.string.dialog_title_warning))//这里是表头的内容
+                    .setMessage(getResources().getString(R.string.main_search_delete_confirm))//这里是中间显示的具体信息
+                    .setPositiveButton(getResources().getString(R.string.dialog_button_ok),(dialog, which) -> {
                         String searchKey = ((TextView) view.findViewById(R.id.search_key)).getText().toString();
 
                         try {
@@ -1112,7 +1112,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener, M
                             GoUtils.DisplayToast(MainActivity.this,getResources().getString(R.string.history_delete_error));
                         }
                     })
-                    .setNegativeButton("取消",
+                    .setNegativeButton(getResources().getString(R.string.dialog_button_cancel),
                             (dialog, which) -> {
                             })
                     .show();
