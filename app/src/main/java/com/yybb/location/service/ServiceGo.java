@@ -33,7 +33,7 @@ import com.yybb.location.R;
 import com.yybb.location.utils.GoUtils;
 
 /**
- * 模拟定位前台服务：按设置项周期(默认 1s,设置页"模拟位置写入频率"可调、修改即时生效)经 TestProvider 持续供给固定位置；
+ * 模拟定位前台服务：按设置项周期(默认 100ms,设置页"模拟位置写入频率"可调、修改即时生效)经 TestProvider 持续供给固定位置；
  * UI 只经 MockLocationController 接口启停与查询，禁止直接依赖 ServiceGoBinder。
  */
 public class ServiceGo extends Service {
@@ -181,7 +181,7 @@ public class ServiceGo extends Service {
         mLocHandler.sendEmptyMessage(HANDLER_MSG_ID);
     }
 
-    /** 供给周期读自设置项(默认 1s)。每 tick 读一次:SharedPreferences 有内存缓存,开销可忽略,设置页修改即时生效 */
+    /** 供给周期读自设置项(默认 100ms)。每 tick 读一次:SharedPreferences 有内存缓存,开销可忽略,设置页修改即时生效 */
     private long readMockWriteIntervalMs() {
         return GoUtils.parseMockWriteIntervalMs(PreferenceManager.getDefaultSharedPreferences(this)
                 .getString("setting_mock_write_interval", null));

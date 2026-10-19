@@ -11,8 +11,6 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- 允许程序访问有关GSM网络信息 -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- 允许程序改变Wi-Fi连接状态 -->
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!-- targetSdk 34+ 前台定位服务必需 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
@@ -43,6 +41,8 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- org.apache.http.legacy 是高德组合包的运行时依赖:com.amap.api.col.3sl.fc 引用
+             org.apache.http.conn.ConnectTimeoutException,删除会在网络超时分支 NoClassDefFoundError -->
         <uses-library
             android:name="org.apache.http.legacy"
             android:required="false" />
