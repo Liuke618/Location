@@ -21,7 +21,7 @@ GoGoGo(任意门)——Android 免 Root 虚拟定位 App(GPL-3.0,仅 arm64-v8a),
 com.yybb.location          # 应用包名(applicationId/namespace)
 ├── (根包)                 # GoApplication、BaseActivity、AppContainer(组合根,手工 DI)
 ├── ui.map      # MainActivity、MainViewModel、MapState、MapController、GeocoderHelper
-├── ui.search|location|update|settings|history|favorite、ui.WelcomeActivity
+├── ui.search|location|update|settings|history|favorite、ui.WelcomeActivity、ui.BaseRecordListActivity(历史/收藏列表共用基类)
 ├── data        # HistoryRepository(+SQLite 实现/内存 fake)、DataBaseHistory*
 ├── service     # MockLocationController 接口、ServiceGoController、ServiceGo(前台服务,按设置项周期经 TestProvider 持续供给固定位置,默认 100ms,档位 100ms~5s;通知栏"停止模拟"按钮经本地广播回 MainActivity 停服——绑定未解时 stopSelf 销不掉服务)
 └── utils
