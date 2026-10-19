@@ -132,14 +132,18 @@ public class GoApplication extends Application {
                     .enableBorder()                                        // 允许打印日志边框，默认禁止
                     .build();
 
-            Printer consolePrinter = new ConsolePrinter();                  // 通过 System.out 打印日志到控制台的打印器
             Printer filePrinter = new FilePrinter                           // 打印日志到文件的打印器
                     .Builder(logPath.getPath())                             // 指定保存日志文件的路径
                     .fileNameGenerator(new ChangelessFileNameGenerator(LOG_FILE_NAME))         // 指定日志文件名生成器，默认为 ChangelessFileNameGenerator("log")
                     .backupStrategy(new FileSizeBackupStrategy2(LOG_ROLL_BYTES, LOG_BACKUP_COUNT))   // 单文件超限即按索引轮转，溢出份数由 xlog 删除
                     .cleanStrategy(new FileLastModifiedCleanStrategy(MAX_TIME))                             // 保留原有 3 天过期清理
                     .build();
-            XLog.init(config, consolePrinter, filePrinter);
+            // 控制台打印器只在 debug 构建挂载:release 仍写文件,但不向 logcat 输出
+            if (BuildConfig.DEBUG) {
+                XLog.init(config, new ConsolePrinter(), filePrinter);
+            } else {
+                XLog.init(config, filePrinter);
+            }
         }
     }
 }

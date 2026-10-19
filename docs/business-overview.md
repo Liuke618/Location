@@ -176,7 +176,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 
 ### 12.4 日志
 
-XLog:文件 `Logs/GoGoGo.log`,单文件 2MB 轮转、最多 4 份备份、3 天过期;侧边栏"反馈"经 FileProvider 分享该文件(不存在则提示);设置项可关写盘(重启生效)。
+XLog:文件 `Logs/GoGoGo.log`,单文件 2MB 轮转、最多 4 份备份、3 天过期;控制台(logcat)打印器仅 debug 构建挂载,release 只写文件;侧边栏"反馈"经 FileProvider 分享该文件(不存在则提示);设置项可关写盘(重启生效)。
 
 ## 13. 已知风险与运行时约束(排障索引)
 
