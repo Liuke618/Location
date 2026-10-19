@@ -158,7 +158,7 @@ GoGoGo(任意门)是一款 **Android 免 Root 虚拟定位 App**:用户在高德
 
 ### 12.2 数据存储
 
-三库一偏好,全部只经 `HistoryRepository` 接口访问(SQLite 实现包住三个 SQLiteOpenHelper;写侧去重统一"先删后插";写操作成败回传 UI,失败不谎报成功;读侧存储失败返回 null(空表返回空列表),历史/收藏/搜索历史入口 Toast"数据读取失败"区分空态;游标映射抽为纯函数,列序契约由 `SQLiteHistoryRepositoryMappingTest`(自绘 FakeCursor)JVM 锚定,SQL 执行语义由契约测试的 InMemory 替身覆盖):
+三库一偏好,全部只经 `HistoryRepository` 接口访问(SQLite 实现包住三个 SQLiteOpenHelper;写侧去重统一"先删后插";写操作成败回传 UI,失败不谎报成功;读侧存储失败返回 null(空表返回空列表),历史/收藏/搜索历史入口 Toast"数据读取失败"区分空态;列表行渲染时单行数据损坏(坐标串解析不出)按行跳过并记日志,不整表清空;游标映射抽为纯函数,列序契约由 `SQLiteHistoryRepositoryMappingTest`(自绘 FakeCursor)JVM 锚定,SQL 执行语义由契约测试的 InMemory 替身覆盖):
 
 | 库 | 版本 | 内容 |
 |----|------|------|

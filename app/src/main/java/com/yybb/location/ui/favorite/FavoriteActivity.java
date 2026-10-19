@@ -133,15 +133,21 @@ public class FavoriteActivity extends BaseActivity {
 
     //查询所有收藏(行形与历史页一致，渲染复用 history_item 布局)
     private List<Map<String, Object>> fetchAllRecord() {
-        List<Map<String, Object>> data = new ArrayList<>();
-
+        List<LocationRow> rows;
         try {
-            List<LocationRow> rows = mHistoryRepository.getFavoriteRows();
-            if (rows == null) {
-                // 存储读取失败:返回 null 交由 updateRecordList 提示,与空表(空列表)区分
-                return null;
-            }
-            for (LocationRow row : rows) {
+            rows = mHistoryRepository.getFavoriteRows();
+        } catch (Exception e) {
+            XLog.e("FAVORITE: ERROR - fetchAllRecord");
+            return null;
+        }
+        if (rows == null) {
+            // 存储读取失败:返回 null 交由 updateRecordList 提示,与空表(空列表)区分
+            return null;
+        }
+
+        List<Map<String, Object>> data = new ArrayList<>();
+        for (LocationRow row : rows) {
+            try {
                 Map<String, Object> item = new HashMap<>();
                 int ID = row.id;
                 String Location = row.location;
@@ -168,10 +174,10 @@ public class FavoriteActivity extends BaseActivity {
                 item.put(KEY_LNG_WGS_RAW, Longitude);
                 item.put(KEY_LAT_WGS_RAW, Latitude);
                 data.add(item);
+            } catch (Exception e) {
+                // 单行数据损坏(如坐标串解析不出)只跳过该行记日志:整表清空会让"有收藏"误显示成"没收藏"
+                XLog.e("FAVORITE: skip unparsable row id=" + row.id);
             }
-        } catch (Exception e) {
-            data.clear();
-            XLog.e("FAVORITE: ERROR - fetchAllRecord");
         }
 
         return data;

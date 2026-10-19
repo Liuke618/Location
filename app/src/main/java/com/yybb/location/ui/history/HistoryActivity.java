@@ -125,15 +125,21 @@ public class HistoryActivity extends BaseActivity {
 
     //sqlite 操作 查询所有记录
     private List<Map<String, Object>> fetchAllRecord() {
-        List<Map<String, Object>> data = new ArrayList<>();
-
+        List<LocationRow> rows;
         try {
-            List<LocationRow> rows = mHistoryRepository.getLocationRows();
-            if (rows == null) {
-                // 存储读取失败:返回 null 交由 updateRecordList 提示,与空表(空列表)区分
-                return null;
-            }
-            for (LocationRow row : rows) {
+            rows = mHistoryRepository.getLocationRows();
+        } catch (Exception e) {
+            XLog.e("HISTORY: ERROR - fetchAllRecord");
+            return null;
+        }
+        if (rows == null) {
+            // 存储读取失败:返回 null 交由 updateRecordList 提示,与空表(空列表)区分
+            return null;
+        }
+
+        List<Map<String, Object>> data = new ArrayList<>();
+        for (LocationRow row : rows) {
+            try {
                 Map<String, Object> item = new HashMap<>();
                 int ID = row.id;
                 String Location = row.location;
@@ -156,10 +162,10 @@ public class HistoryActivity extends BaseActivity {
                 item.put(KEY_LNG_LAT_WGS, "[经度:" + doubleLongitude + " 纬度:" + doubleLatitude + "]");
                 item.put(KEY_LNG_LAT_CUSTOM, "[经度:" + doubleBDLongitude + " 纬度:" + doubleBDLatitude + "]");
                 data.add(item);
+            } catch (Exception e) {
+                // 单行数据损坏(如坐标串解析不出)只跳过该行记日志:整表清空会让"有记录"误显示成"没记录"
+                XLog.e("HISTORY: skip unparsable row id=" + row.id);
             }
-        } catch (Exception e) {
-            data.clear();
-            XLog.e("HISTORY: ERROR - fetchAllRecord");
         }
 
         return data;
