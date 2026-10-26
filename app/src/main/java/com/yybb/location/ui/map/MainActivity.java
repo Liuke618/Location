@@ -67,6 +67,8 @@ public class MainActivity extends BaseActivity implements MapController.MapEvent
     public static final String POI_LONGITUDE = PoiSearchHelper.POI_LONGITUDE;
     public static final String POI_LATITUDE = PoiSearchHelper.POI_LATITUDE;
 
+    //WiFi 警告只提示一次的持久化标记(内部键,不暴露到设置页)
+    private static final String PREF_KEY_WIFI_WARNING_SHOWN = "setting_wifi_warning_shown";
     private SharedPreferences sharedPreferences;
     //主界面状态持有器（Factory 构造注入 AppContainer 单例 MapState）：仅状态镜像，渲染路径保持直接调用不变
     private MainViewModel mMainViewModel;
@@ -551,9 +553,7 @@ public class MainActivity extends BaseActivity implements MapController.MapEvent
                 mMainViewModel.clearSelectedPoint();
                 mMapController.markMockingPosition(mockedPoint);
 
-                if (GoUtils.isWifiEnabled(MainActivity.this)) {
-                    GoUtils.showDisableWifiDialog(MainActivity.this);
-                }
+                maybeWarnWifiOnce();
             }
         } else {
             if (!GoUtils.isAllowMockLocation(this)) {
@@ -584,12 +584,19 @@ public class MainActivity extends BaseActivity implements MapController.MapEvent
                     mMainViewModel.clearSelectedPoint();
                     mMapController.markMockingPosition(mockedPoint);
 
-                    if (GoUtils.isWifiEnabled(MainActivity.this)) {
-                        GoUtils.showDisableWifiDialog(MainActivity.this);
-                    }
+                    maybeWarnWifiOnce();
                 }
             }
         }
+    }
+
+    //WiFi 开启时定位会闪回真实位置:首次成功模拟后提示一次并持久化,此后不再打断
+    private void maybeWarnWifiOnce() {
+        if (!GoUtils.isWifiEnabled(this) || sharedPreferences.getBoolean(PREF_KEY_WIFI_WARNING_SHOWN, false)) {
+            return;
+        }
+        sharedPreferences.edit().putBoolean(PREF_KEY_WIFI_WARNING_SHOWN, true).apply();
+        GoUtils.showDisableWifiDialog(this);
     }
 
 }
